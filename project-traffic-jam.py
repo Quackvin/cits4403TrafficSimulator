@@ -12,7 +12,7 @@ import math
 Main_Road_Width= 400
 Main_Road_Height = 400
 
-
+lane_width = 40
 
 root=tk.Tk()
 root.title("Traffic Congestion Simulation")
@@ -20,13 +20,17 @@ canvas = tk.Canvas(root, width=Main_Road_Width, height=Main_Road_Height, bg="#FF
 canvas.pack()
 
 class Lane():
-    def __init__(self,start_x,start_y,lane_length,lane_width, road_tag, num_lanes, lane_num):
+    def __init__(self,start_x,start_y,lane_length,lane_width, road_tag, num_lanes, lane_num, speed_limit):
         self.tags = road_tag
         #Lanes are given a number so cars can change lanes just by counting up or down
         #When a car decides what lane it wants to be in a searches by road tag then filters for lane_num == desired_lane_num
         #road should have #lanes
         self.num_lanes = num_lanes
         self.lane_num = lane_num
+
+        self.start_point_x = start_x
+        self.start_point_y = start_y
+
         self.draw_start_point_x = start_x 
         self.draw_start_point_y = start_y - lane_width/2
         self.draw_end_point_x = start_x + lane_length
@@ -35,13 +39,12 @@ class Lane():
                 (self.draw_start_point_x,self.draw_start_point_y,self.draw_end_point_x,self.draw_end_point_y),
                 width=4,outline='black',fill="gray",tags=self.tags)
         
-        self.start_point_x = start_x 
-        self.start_point_y = start_y
+
         #end points may need to vary based on if lane is horizontal or vertical
         self.end_point_x = start_x + lane_length
         self.end_point_y = start_y
         
-        self.speed_limit = 13.98/8.0
+        self.speed_limit = speed_limit
         self.to = [] # Directed graph neighbors
         self.car_agents = []
 
@@ -67,15 +70,14 @@ class Lane():
            # i = 
            # car_Eu_distance = car.get_Euclidian_distance(lane_tag)
            # if car_Eu_distance 
-            
 
-        
+#autogenerates lanes based on road details. All lanes inherit road attributes
+def make_road(start_x, start_y, length, direction, tag, num_lanes, speed_limit, is_2way):
+    #return in an array
+    lanes = []
+    for i in xrange(0,num_lanes):
 
-#class Road():
-    #def __init__(lane_data):
-        
-        
-        
+
 
 class Car():
     def __init__(self,start_x,start_y,classType,road_tag, lane_num):
@@ -243,6 +245,5 @@ for t in range(300):
     Bus_1.move()
     Bus_2.move()
     canvas.update()
-
 
 root.mainloop()
