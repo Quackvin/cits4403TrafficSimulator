@@ -1,5 +1,5 @@
 import Tkinter as tk
-import time, math
+import time, math, random
 
 Main_Road_Width= 1000
 Main_Road_Height = 1000
@@ -110,13 +110,19 @@ class Lane():
         )
 
 class Road():
-    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, speed_limit, is_2way = False, prev_road = None, next_road = None):
+    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, speed_limit, is_2way = False, prev_roads = None, next_roads = None):
         self.start_x = start_x
         self.start_y = start_y
         self.length = length
         self.direction = direction
-        self.prev_road = prev_road
-        self.next_road = next_road
+        if prev_roads == None:
+            self.prev_roads = []
+        else:
+            self.prev_roads = prev_roads
+        if next_roads == None:
+            self.next_roads = []
+        else:
+            self.next_roads = next_roads
 
         self.road_tag = road_tag
         self.num_lanes = num_lanes
@@ -125,9 +131,9 @@ class Road():
         self.is_2way = is_2way
         self.is_2way_check()
 
-        if self.prev_road != None:
+        if len(self.prev_roads) == 1:
             self.start_at_prev()
-            self.connect_roads()
+            self.connect_roads(prev_roads[0])
 
         self.lanes = []
         self.make_road()
@@ -172,7 +178,8 @@ class Road():
 
     #lets you make a road starting at end of another
     def start_at_prev(self):
-        prev_road = eval(self.prev_road)
+        #only run when creating road based on previous, therefore will only have one prev_road. More can be added later
+        prev_road = eval(self.prev_roads[0])
 
         #this will shift it to the side so the roads arent overlapping
         self_road_offset = self.get_road_offset(self.num_lanes)
@@ -226,12 +233,14 @@ class Road():
             raise Exception('Invalid Direction')
 
     #connects previous road to self
-    def connect_roads(self):
-        eval(self.prev_road).next_road = self.road_tag
+    def connect_roads(self, prev_road):
+        eval(prev_road).add_next_road(self.road_tag)
 
     def add_next_road(self, next_road):
-        self.next_road = next_road
-        eval(next_road).prev_road = self.road_tag
+        self.next_roads.append(next_road)
+
+    def add_prev_road(self, prev_road):
+        self.prev_roads.append(prev_road)
 
     #offset lines up with center of lane
     def get_lane_offset(self, num_lanes):
@@ -268,22 +277,32 @@ class Car():
         self.direction = self.get_lane().direction
         #offset is percentage of road length
         self.distance_travelled = (float(offset)/100) * self.get_lane().length
-        #should be max speed, not speed
-        #speed should change
+        #starting speed
         self.speed = self.get_lane().speed_limit
         self.speed_xy = self.get_speed_components(self.speed)
+
+        '''determines which way to turn at intersection
+        can be 0/1/2 because intersection can have max 4 roads and one is the road you're going in on'''
+        self.next_direction = 0
 
         '''things the car needs
         - max+speed = 80 + 100 * ln((speeding_attitude * 1.7) + 1)
             - 80 is speed limit
-            - 180 is speed limit
+            - 100 is how far over the limit the most daring are willing to go
         - max_acceleration (engine power)
         - max_deceleration (breaking capacity)
         - speeding_attitude (how woll they are to speed)
         - perception_time (reaction time)
         -
-
         '''
+
+        #should all be random (need realistic ranges)
+        self.speeding_attitude = 0
+        #should be random centered around speed limit
+        self.max_speed = self.get_lane().speed_limit
+        self.max_acceleration = 3
+        self.breaking_capacity = 6
+        self.reaction_time = 2
 
         self.draw_car()
 
@@ -300,7 +319,10 @@ class Car():
             raise Exception('Invalid Direction')
 
     def get_lane(self):
-        return eval(self.road_tag).lanes[self.lane_num]
+        return self.get_road().lanes[self.lane_num]
+
+    def get_road(self):
+        return eval(self.road_tag)
 
     def draw_car(self):
         if self.direction == 'right':
@@ -341,18 +363,54 @@ class Car():
         if show_nose:
             canvas.move(self.nose, self.speed_xy[0], self.speed_xy[1])
         self.distance_travelled += self.speed
+        self.accelerate()
+        self.change_lanes()
+
+    #need algorithm for this
+    def accelerate(self):
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        self.speed = self.speed
+        self.speed_xy = self.get_speed_components(self.speed)
+
+    def change_lanes(self):
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        return None
 
     def next_road(self):
         if eval(self.road_tag).lanes[self.lane_num].isOncoming:
-            next_road = eval(eval(self.road_tag).prev_road)
+            next_road = eval(eval(self.road_tag).prev_roads[self.next_direction])
         else:
-            next_road = eval(eval(self.road_tag).next_road)
+            next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
         self.road_tag = next_road.road_tag
         self.distance_travelled = 0
         self.direction = next_road.lanes[self.lane_num].direction
-        #should be max speed, not speed
         self.speed_xy = self.get_speed_components(self.speed)
-        #move car to next road (right now teleports)
+
+        #car randomly chooses which road to take next out of the next roads given
+        self.next_direction = random.randrange(0,len(self.get_road().next_roads))
+
+        #move car to next road (right now it teleports)
+        #
+        #
+        #
         canvas.delete(self.rect)
         if show_nose:
             canvas.delete(self.nose)
@@ -363,34 +421,51 @@ def move_cars(cars_array):
         i.move()
         #lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
         #need function that gives the right adjusted distance based on prev and next roads
+        #
+        #
+        #
+        #
+        #
         adjusted_dist = i.distance_travelled - i.lane_num * lane_width
         if adjusted_dist >= eval(i.road_tag).length:
             i.next_road()
 
 cars = []
 
-road1 = Road(800,200,300,'left','road1',2,10, is_2way=True)
-road2 = Road(None, None, 300, 'left', 'road2', 2,10, is_2way=True, prev_road='road1')
-road3 = Road(None, None, 100, 'down', 'road3', 2,10, is_2way=True, prev_road='road2')
-road4 = Road(None, None, 100, 'down', 'road4', 2,10, is_2way=True, prev_road='road3')
-road5 = Road(None, None, 300, 'right', 'road5', 2,10, is_2way=True, prev_road='road4')
-road6 = Road(None, None, 300, 'right', 'road6', 2,10, is_2way=True, prev_road='road5')
-road7 = Road(None, None, 100, 'up', 'road7', 2,10, is_2way=True, prev_road='road6')
-road8 = Road(None, None, 100, 'up', 'road8', 2,10, is_2way=True, prev_road='road7')
-road8.add_next_road('road1')
+#testing road ending with 2 directions
+road1 = Road(500,200,300,'down','road1',2,10, is_2way=True)
+road2 = Road(None,None,300,'left','road2',2,10, is_2way=True, prev_roads=['road1'])
+road3 = Road(800,200,300,'right','road3',2,10, is_2way=True, prev_roads=['road1'])
+
+road2.add_next_road('road1')
+road3.add_next_road('road1')
 
 cars.append(Car('private_car','road1',0, offset=80))
-cars.append(Car('private_car','road2',1, offset=80))
+
+#cycling left works
+'''road1 = Road(800,200,300,'left','road1',2,10, is_2way=True)
+road2 = Road(None, None, 300, 'left', 'road2', 2,10, is_2way=True, prev_roads=['road1'])
+road3 = Road(None, None, 100, 'down', 'road3', 2,10, is_2way=True, prev_roads=['road2'])
+road4 = Road(None, None, 100, 'down', 'road4', 2,10, is_2way=True, prev_roads=['road3'])
+road5 = Road(None, None, 300, 'right', 'road5', 2,10, is_2way=True, prev_roads=['road4'])
+road6 = Road(None, None, 300, 'right', 'road6', 2,10, is_2way=True, prev_roads=['road5'])
+road7 = Road(None, None, 100, 'up', 'road7', 2,10, is_2way=True, prev_roads=['road6'])
+road8 = Road(None, None, 100, 'up', 'road8', 2,10, is_2way=True, prev_roads=['road7'])
+road8.add_next_road('road1')
+road1.add_prev_road('road8')
+
+cars.append(Car('private_car','road1',0, offset=80))
+cars.append(Car('private_car','road2',1, offset=80))'''
 
 #offsets not working for road cycling right
 '''road1 = Road(200,200,300,'right','road1',2,10, is_2way=True)
-road2 = Road(None, None, 300, 'right', 'road2', 2,10, is_2way=True, prev_road='road1')
-road3 = Road(None, None, 100, 'down', 'road3', 2,10, is_2way=True, prev_road='road2')
-road4 = Road(None, None, 100, 'down', 'road4', 2,10, is_2way=True, prev_road='road3')
-road5 = Road(None, None, 300, 'left', 'road5', 2,10, is_2way=True, prev_road='road4')
-road6 = Road(None, None, 300, 'left', 'road6', 2,10, is_2way=True, prev_road='road5')
-road7 = Road(None, None, 100, 'up', 'road7', 2,10, is_2way=True, prev_road='road6')
-road8 = Road(None, None, 100, 'up', 'road8', 2,10, is_2way=True, prev_road='road7')
+road2 = Road(None, None, 300, 'right', 'road2', 2,10, is_2way=True, prev_roads=['road1'])
+road3 = Road(None, None, 100, 'down', 'road3', 2,10, is_2way=True, prev_roads=['road2'])
+road4 = Road(None, None, 100, 'down', 'road4', 2,10, is_2way=True, prev_roads=['road3'])
+road5 = Road(None, None, 300, 'left', 'road5', 2,10, is_2way=True, prev_roads=['road4'])
+road6 = Road(None, None, 300, 'left', 'road6', 2,10, is_2way=True, prev_roads=['road5'])
+road7 = Road(None, None, 100, 'up', 'road7', 2,10, is_2way=True, prev_roads=['road6'])
+road8 = Road(None, None, 100, 'up', 'road8', 2,10, is_2way=True, prev_roads=['road7'])
 road8.add_next_road('road1')
 
 cars.append(Car('private_car','road1',0, offset=80))
