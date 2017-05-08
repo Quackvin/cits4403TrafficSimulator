@@ -67,7 +67,7 @@ class Lane():
                 self.direction = 'left'
                 self.start_point_x = self.start_point_x + self.length
             elif self.direction == 'left':
-                self.direction == 'right'
+                self.direction = 'right'
                 self.start_point_x = self.start_point_x - self.length
             elif self.direction == 'down':
                 self.direction = 'up'
@@ -84,11 +84,13 @@ class Lane():
         )
 
 class Road():
-    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, speed_limit, is_2way = False):
+    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, speed_limit, is_2way = False, prev_road = None, next_road = None):
         self.start_x = start_x
         self.start_y = start_y
         self.length = length
         self.direction = direction
+        self.prev_road = prev_road
+        self.next_road = next_road
 
         self.road_tag = road_tag
         self.num_lanes = num_lanes
@@ -96,6 +98,10 @@ class Road():
 
         self.is_2way = is_2way
         self.is_2way_check()
+
+        if self.prev_road != None:
+            self.start_at_prev()
+            self.connect_roads()
 
         self.lanes = []
         self.make_road()
@@ -112,10 +118,7 @@ class Road():
         isOncoming = False
 
         #Offset is determined by if road has even or odd number of lanes
-        if self.num_lanes % 2 == 0:
-            offset = -(lane_width / 2) * (self.num_lanes / 2)
-        else:
-            offset = -lane_width * ((self.num_lanes - 1) / 2)
+        offset = self.get_lane_offset(self.num_lanes)
 
         for i in xrange(0, self.num_lanes):
             if self.is_2way and i == self.num_lanes/2:
@@ -140,16 +143,85 @@ class Road():
             else:
                 raise Exception('Invalid Direction')
 
+    #lets you make a road starting at end of another
+    def start_at_prev(self):
+        prev_road = eval(self.prev_road)
+
+        #this will shift it to the side so the roads arent overlapping
+        self_road_offset = self.get_road_offset(self.num_lanes)
+        prev_road_offset = self.get_road_offset(prev_road.num_lanes)
+
+        if prev_road.direction == 'right':
+            self.start_x = prev_road.start_x + prev_road.length - self_road_offset
+            if self.direction == 'down':
+                self.start_y = prev_road.start_y - prev_road_offset
+            elif self.direction == 'up':
+                self.start_y = prev_road.start_y + prev_road_offset
+            else:
+                raise Exception('Cant go horizontal to horizontal')
+
+        elif prev_road.direction == 'left':
+            self.start_x = prev_road.start_x - prev_road.length + self_road_offset
+            if self.direction == 'down':
+                self.start_y = prev_road.start_y - prev_road_offset
+            elif self.direction == 'up':
+                self.start_y = prev_road.start_y + prev_road_offset
+            else:
+                raise Exception('Cant go horizontal to horizontal')
+
+        elif prev_road.direction == 'down':
+            self.start_y = prev_road.start_y + prev_road.length - self_road_offset
+            if self.direction == 'right':
+                self.start_x = prev_road.start_x - prev_road_offset
+            elif self.direction == 'left':
+                self.start_x = prev_road.start_x + prev_road_offset
+            else:
+                raise Exception('Cant go vertical to vertical')
+
+        elif prev_road.direction == 'up':
+            self.start_y = prev_road.start_y - prev_road.length + self_road_offset
+            if self.direction == 'right':
+                self.start_x = prev_road.start_x - prev_road_offset
+            elif self.direction == 'left':
+                self.start_x = prev_road.start_x + prev_road_offset
+            else:
+                raise Exception('Cant go vertical to vertical')
+
+        else:
+            raise Exception('Invalid Direction')
+
+    #connects previous road to self
+    def connect_roads(self):
+        eval(self.prev_road).next_road = self.road_tag
+
+    def add_next_road(self, next_road):
+        self.next_road = next_road
+        eval(next_road).prev_road = self.road_tag
+
+    #offset lines up with center of lane
+    def get_lane_offset(self, num_lanes):
+        if num_lanes % 2 == 0:
+            return -(lane_width / 2) * (num_lanes / 2)
+        else:
+            return -lane_width * ((num_lanes - 1) / 2)
+
+    #offset lines up with end of lane
+    def get_road_offset(self, num_lanes):
+        if num_lanes % 2 == 1:
+            return -(lane_width * num_lanes) / 2
+        else:
+            return -lane_width * (num_lanes / 2)
+
+    def is_2way_check(self):
+        if self.num_lanes % 2 == 1 and self.is_2way:
+            raise Exception('2way Road must have even number of Lanes')
+
     #for debugging
     def draw_ends(self):
         canvas.create_rectangle(
             (self.start_x - 5, self.start_y - 5, self.start_x + 5, self.start_y + 5),
             width=1, outline='black', fill="red"
         )
-
-    def is_2way_check(self):
-        if self.num_lanes % 2 == 1:
-            raise Exception('2way Road must have even number of Lanes')
 
 class Car():
     def __init__(self, classType, road_tag, lane_num, offset = 0):
@@ -161,7 +233,7 @@ class Car():
         self.direction = self.get_lane().direction
         self.distance_travelled = offset
         self.speed = eval(road_tag).speed_limit
-        self.speed_xy = self.get_speed_components(eval(road_tag).speed_limit)
+        self.speed_xy = self.get_speed_components(self.speed)
 
         '''self.speed = canvas.find_withtag(self.tags)
         print 'canvas.find_withtag(self.tags): ', self.speed
@@ -217,30 +289,58 @@ class Car():
 
     def move(self):
         canvas.move(self.rect, self.speed_xy[0], self.speed_xy[1])
+        self.distance_travelled += self.speed
+
+    def next_road(self):
+        if eval(self.road_tag).lanes[self.lane_num].isOncoming:
+            print 'eval(self.road_tag): ', eval(self.road_tag)
+            print "eval(self.road_tag).prev_road: ", eval(self.road_tag).prev_road
+            next_road = eval(eval(self.road_tag).prev_road)
+        else:
+            next_road = eval(eval(self.road_tag).next_road)
+        self.road_tag = next_road.road_tag
+        self.distance_travelled = 0
+        self.direction = next_road.lanes[self.lane_num].direction
+        self.speed = next_road.speed_limit
+        self.speed_xy = self.get_speed_components(self.speed)
+        #move car to next road (right now teleports)
+        canvas.delete(self.rect)
+        self.draw_car()
 
 def move_cars(cars_array):
     for i in cars_array:
         i.move()
+        if i.distance_travelled >= eval(i.road_tag).length:
+            i.next_road()
+
+cars = []
 
 #lane1 = Lane(0, 80, 1000, 'down', 'main_road', 3, 0, 70)
-#main_road = Road(200,200,700,'right','main_road',3,10,False)
-right_road = Road(500,500,700,'right','main_road',2,10,True)
+road1 = Road(700,200,300,'left','road1',2,10, is_2way=True)
+road2 = Road(None, None, 300, 'down', 'road2', 2,10, is_2way=True, prev_road='road1')
+road3 = Road(None, None, 300, 'right', 'road3', 2,10, is_2way=True, prev_road='road2')
+road4 = Road(None, None, 300, 'up', 'road4', 2,10, is_2way=True, prev_road='road3')
+road4.add_next_road('road1')
+'''right_road = Road(500,500,700,'right','main_road',2,10,True)
 left_road = Road(500,500,700,'left','main_road',2,10,True)
 down_road = Road(500,500,700,'down','main_road',2,10,True)
 up_road = Road(500,500,700,'up','main_road',2,10,True)
 
-cars = []
+
 cars.append(Car('private_car','right_road',0, offset=100))
 cars.append(Car('private_car','left_road',0, offset=100))
 cars.append(Car('private_car','down_road',0, offset=100))
 cars.append(Car('private_car','up_road',0, offset=100))
 cars.append(Car('private_car','right_road',1, offset=100))
 cars.append(Car('private_car','left_road',1, offset=100))
-cars.append(Car('private_car','down_road',1, offset=100))
-cars.append(Car('private_car','up_road',1, offset=100))
+cars.append(Car('private_car','down_road',1, offset=100))'''
+cars.append(Car('private_car','road1',0, offset=200))
+cars.append(Car('private_car','road1',1, offset=100))
 
 
-for t in range(300):
+
+
+for t in range(1000):
     time.sleep(0.025)
     move_cars(cars)
     canvas.update()
