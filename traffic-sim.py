@@ -368,6 +368,8 @@ class Car():
 
     #need algorithm for this
     def accelerate(self):
+        self.get_car_infront()
+        self.get_distance_to_next_intersection()
         #
         #
         #
@@ -382,13 +384,33 @@ class Car():
         self.speed = self.speed
         self.speed_xy = self.get_speed_components(self.speed)
 
+    def get_car_infront(self):
+        #gets car infront so its properties can be checked
+        #
+        #
+        #
+        #
+        #
+        return None
+
+    def get_distance_to_next_intersection(self):
+        return self.get_road().length - self.distance_travelled
+
     def change_lanes(self):
+        self.check_side_lane(0)
+        #decide if want to change lanes
+        #check side lane
+        #change if can
+        #dont change if cant
         #
         #
         #
         #
         #
-        #
+        return None
+
+    def check_side_lane(self, side):
+        #checks if there are cars in lane to side
         #
         #
         #
@@ -419,13 +441,14 @@ class Car():
 def move_cars(cars_array):
     for i in cars_array:
         i.move()
-        #lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
         #need function that gives the right adjusted distance based on prev and next roads
         #
         #
         #
         #
         #
+        #lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
+        # adjustment only works for counter clockwise
         adjusted_dist = i.distance_travelled - i.lane_num * lane_width
         if adjusted_dist >= eval(i.road_tag).length:
             i.next_road()
