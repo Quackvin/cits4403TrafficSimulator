@@ -180,6 +180,8 @@ class Road():
     def start_at_prev(self):
         #only run when creating road based on previous, therefore will only have one prev_road. More can be added later
         prev_road = eval(self.prev_roads[0])
+        print self.prev_roads[0]
+        print prev_road
 
         #this will shift it to the side so the roads arent overlapping
         self_road_offset = self.get_road_offset(self.num_lanes)
@@ -456,14 +458,17 @@ def move_cars(cars_array):
 cars = []
 
 #testing road ending with 2 directions
-road1 = Road(500,200,300,'down','road1',2,10, is_2way=True)
-road2 = Road(None,None,300,'left','road2',2,10, is_2way=True, prev_roads=['road1'])
-road3 = Road(800,200,300,'right','road3',2,10, is_2way=True, prev_roads=['road1'])
+road1 = Road(500,200,300,'down','road1',3,10, is_2way=False)
+road2 = Road(None,None,300,'left','road2',2,10, is_2way=False, prev_roads=['road1'])
+road3 = Road(800,200,300,'right','road3',2,10, is_2way=False, prev_roads=['road1'])
 
 road2.add_next_road('road1')
 road3.add_next_road('road1')
+road1.add_prev_road('road2')
+road1.add_prev_road('road3')
 
 cars.append(Car('private_car','road1',0, offset=80))
+cars.append(Car('private_car','road1',2, offset=50))
 
 #cycling left works
 '''road1 = Road(800,200,300,'left','road1',2,10, is_2way=True)
@@ -490,6 +495,7 @@ road6 = Road(None, None, 300, 'left', 'road6', 2,10, is_2way=True, prev_roads=['
 road7 = Road(None, None, 100, 'up', 'road7', 2,10, is_2way=True, prev_roads=['road6'])
 road8 = Road(None, None, 100, 'up', 'road8', 2,10, is_2way=True, prev_roads=['road7'])
 road8.add_next_road('road1')
+road1.add_prev_road('road8')
 
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
