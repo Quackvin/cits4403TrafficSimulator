@@ -14,6 +14,8 @@ car_width = 20 #20
 #for switching old and new values
 tick = True
 
+num_cars = 0
+
 #debugging
 show_nose = True
 lane_colours = True
@@ -272,6 +274,11 @@ class Road():
 
 class Car():
     def __init__(self, classType, road_tag, lane_num, offset = 0):
+        global num_cars
+
+        self.id = num_cars
+        num_cars += 1
+
         self.car_length = car_length
         self.car_width = car_width
         self.car_class = classType
@@ -312,41 +319,81 @@ class Car():
         self.draw_car()
 
     #always reading and writing opposites
-    def read_speed(self):
+    #if one isnt written they should be the same
+    def read_speed(self, own = True):
         if tick:
-            return self.speed[1]
+            if not own:
+                return self.speed[1]
+            else:
+                return self.speed[0]
         else:
-            return self.speed[0]
+            if not own:
+                return self.speed[0]
+            else:
+                return self.speed[1]
 
     def write_speed(self, speed):
+        self.has_speed_changed = True
         if tick:
             self.speed[0] = speed
         else:
             self.speed[1] = speed
 
-    def read_lane_num(self):
+    def update_speed(self):
         if tick:
-            return self.lane_num[1]
+            self.speed[1] = self.speed[0]
         else:
-            return self.lane_num[0]
+            self.speed[0] = self.speed[1]
+
+    def read_lane_num(self, own = True):
+        if tick:
+            if not own:
+                return self.lane_num[1]
+            else:
+                return self.lane_num[0]
+        else:
+            if not own:
+                return self.lane_num[0]
+            else:
+                return self.lane_num[1]
 
     def write_lane_num(self, lane_num):
+        self.has_lane_changed = True
         if tick:
             self.lane_num[0] = lane_num
         else:
             self.lane_num[1] = lane_num
 
-    def read_distance_travelled(self):
+    def update_lane_num(self):
         if tick:
-            return self.distance_travelled[1]
+            self.lane_num[1] = self.lane_num[0]
         else:
-            return self.distance_travelled[0]
+            self.lane_num[0] = self.lane_num[1]
+
+    def read_distance_travelled(self, own = True):
+        if tick:
+            if not own:
+                return self.distance_travelled[1]
+            else:
+                return self.distance_travelled[0]
+        else:
+            if not own:
+                return self.distance_travelled[0]
+            else:
+                return self.distance_travelled[1]
 
     def write_distance_travelled(self, dist):
+        self.has_dist_changed = True
         if tick:
             self.distance_travelled[0] = dist
         else:
             self.distance_travelled[1] = dist
+
+    def update_distance_travelled(self):
+        if tick:
+            self.distance_travelled[1] = self.distance_travelled[0]
+        else:
+            self.distance_travelled[0] = self.distance_travelled[1]
 
     def get_speed_components(self, speed):
         if self.direction == 'right':
@@ -401,16 +448,105 @@ class Car():
                 width=1, outline='black', fill="green", tags=self.road_tag)
 
     def move(self):
+        #tells vars whether to update
+        self.has_speed_changed = False
+        self.has_lane_changed = False
+        self.has_dist_changed = False
+
+        #move
         canvas.move(self.rect, self.speed_xy[0], self.speed_xy[1])
         if show_nose:
             canvas.move(self.nose, self.speed_xy[0], self.speed_xy[1])
-        self.write_distance_travelled(self.read_distance_travelled() + self.read_speed())
+        #putting own to false is a hack because i cant figure out the logic properly
+        self.write_distance_travelled(self.read_distance_travelled(own = False) + self.read_speed())
+
+        #other things
+        '''
+        if critical:
+            if tend_change_lanes:
+                if can_change_lanes:
+                    change_lanes
+                else:
+                    if can_brake:
+                        brake()
+                    else:
+                        collision()
+            else:
+                if can_brake:
+                    brake()
+                else:
+                    collision()
+        else:
+            accelerate()
+            if speed_>_max:
+                speed = max
+        '''
+        if self.tend_change_lanes() is not False:
+            if self.can_change_lanes():
+                self.change_lanes(self.tend_change_lanes())
+
         self.accelerate()
-        self.change_lanes()
+
+        if not self.has_speed_changed:
+            self.update_speed()
+        if not self.has_lane_changed:
+            self.update_lane_num()
+        if not self.has_dist_changed:
+            self.update_distance_travelled()
+
+    def is_critical(self):
+        #random atm
+        return tick
+
+    #working returns lane it wants to change to or False
+    def tend_change_lanes(self):
+        #should check dist to car infront in next lane, if > current lane return true
+        #print '------------my lane'
+        car_infront = self.get_lane_car_infront(self.read_lane_num())
+
+        #If no cars infront dont want to change
+        if car_infront == None:
+            return False
+
+        #look at lanes on either side
+        for i in [self.read_lane_num() - 1, self.read_lane_num() + 1]:
+            to_lane = None
+            to_lane_dist = 0
+            #dont look at own lane or lanes going in opposite direction
+            if i >= 0 and i < self.get_road().num_lanes and self.get_road().lanes[i].direction == self.direction:
+                #get closest car infront in next lane
+                #print '------------side lane'
+
+                side_car_infront = self.get_lane_car_infront(i)
+                if side_car_infront != None:
+                    #if side_cat_infront is ahead of car_infront and remember that lane and compare it to previous
+                    if side_car_infront.read_distance_travelled() > car_infront.read_distance_travelled()\
+                            and side_car_infront.read_distance_travelled() > to_lane_dist:
+                        to_lane = i
+                        to_lane_dist = side_car_infront.read_distance_travelled()
+                #there is a car infront but not to the side
+                else:
+                    return i
+            if to_lane != None:
+                return to_lane
+        return False
+
+    def can_change_lanes(self):
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        self.get_side_lane_cars()
+        return True
 
     #need algorithm for this
     def accelerate(self):
-        self.get_car_infront()
+
+        #warning, dist can be negative
         self.get_distance_to_next_intersection()
         #
         #
@@ -426,37 +562,48 @@ class Car():
         self.write_speed(self.read_speed())
         self.speed_xy = self.get_speed_components(self.read_speed())
 
-    def get_car_infront(self):
-        #gets car infront so its properties can be checked
-        #
-        #
-        #
-        #
-        #
-        return None
-
+    #working
     def get_distance_to_next_intersection(self):
         return self.get_road().length - self.read_distance_travelled()
 
-    def change_lanes(self):
-        self.check_side_lane(0)
-        #decide if want to change lanes
-        #check side lane
-        #change if can
-        #dont change if cant
-        #
-        #
-        #
-        #
-        #
-        return None
+    def change_lanes(self, lane):
+        self.write_lane_num(lane)
 
-    def check_side_lane(self, side):
-        #checks if there are cars in lane to side
-        #
-        #
-        #
-        return None
+        #redraw car in other lane
+        canvas.delete(self.rect)
+        if show_nose:
+            canvas.delete(self.nose)
+        self.draw_car()
+
+    #working
+    def get_lane_car_infront(self, lane):
+        #gets car infront so its properties can be checked
+        car_infront = None
+        closest_car_dist = 10000
+
+        #cars is global list of cars
+        for car in cars:
+            '''print 'id ', self.id
+            print 'lane ', lane
+            print 'car lane ', car.read_lane_num()
+            print '  tag check:  ', car.road_tag == self.road_tag
+            print '  id check:   ', car.id != self.id
+            print '  lane check: ', car.read_lane_num() == lane
+            print '  ahead self: ', car.read_distance_travelled() > self.read_distance_travelled()
+            print '  below ref:  ', car.read_distance_travelled() < closest_car_dist'''
+            #same road, not self, in right lame, ahead of you, closer than current closest
+            if car.road_tag == self.road_tag \
+                    and car.id != self.id\
+                    and car.read_lane_num() == lane\
+                    and car.read_distance_travelled() > self.read_distance_travelled()\
+                    and car.read_distance_travelled() < closest_car_dist:
+                closest_car_dist = car.read_distance_travelled()
+                car_infront = car
+
+        '''print 'lane checking: ', lane
+        print 'car infront: ', car_infront
+        print '==================' '''
+        return car_infront
 
     def next_road(self):
         if eval(self.road_tag).lanes[self.read_lane_num()].isOncoming:
@@ -464,7 +611,7 @@ class Car():
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
         self.road_tag = next_road.road_tag
-        self.distance_travelled = [0,0]
+        self.write_distance_travelled(0)
 
         self.direction = next_road.lanes[self.read_lane_num()].direction
         self.speed_xy = self.get_speed_components(self.read_speed())
@@ -476,6 +623,7 @@ class Car():
         #
         #
         #
+
         canvas.delete(self.rect)
         if show_nose:
             canvas.delete(self.nose)
@@ -493,6 +641,7 @@ def move_cars(cars_array):
         #lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
         # adjustment only works for counter clockwise
         adjusted_dist = i.read_distance_travelled() - i.read_lane_num() * lane_width
+
         if adjusted_dist >= eval(i.road_tag).length:
             i.next_road()
 
@@ -508,8 +657,8 @@ road4.add_next_road('road1')
 road1.add_prev_road('road4')
 
 cars.append(Car('private_car','road1',0, offset=0))
+cars.append(Car('private_car','road1',1, offset=80))
 cars.append(Car('private_car','road1',0, offset=40))
-cars.append(Car('private_car','road1',0, offset=80))
 
 #testing road ending with 2 directions
 '''road1 = Road(500,200,300,'down','road1',2,10, is_2way=True)
