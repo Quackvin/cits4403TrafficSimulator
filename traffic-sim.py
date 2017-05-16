@@ -1,26 +1,29 @@
 import Tkinter as tk
-import time, math, random
+import time, math, random, sys
 
 Main_Road_Width = 1000
 Main_Road_Height = 1000
 
-lane_width = 40  # 40
-lane_border = 4  # 4
+scale = 10
+
+lane_width = 3 * scale  # 40
+lane_border = 0.4 * scale  # 4
 lane_colour = 'gray'
 
-car_length = 30  # 30
-car_width = 20  # 20
-
-# for switching old and new values
-tick = True
+car_length = 3 * scale  # 30
+car_width = 2 * scale  # 20
 
 num_cars = 0
 
 # debugging
-show_nose = True
-lane_colours = True
-show_lane_start = True
-show_road_start = True
+show_nose = False
+lane_colours = False
+show_lane_start = False
+show_road_start = False
+show_car1 = True
+
+ratio1 = float(1)
+ratio2 = float(1)
 
 forward_lane_col = 'green'
 reverse_lane_col = 'yellow'
@@ -33,7 +36,6 @@ root = tk.Tk()
 root.title("Traffic Congestion Simulation")
 canvas = tk.Canvas(root, width=Main_Road_Width, height=Main_Road_Height, bg="#FFFFFF")
 canvas.pack()
-
 
 class Lane():
     def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, lane_num, isOncoming, speed_limit):
@@ -94,7 +96,6 @@ class Lane():
             (self.start_point_x - 2, self.start_point_y - 2, self.start_point_x + 2, self.start_point_y + 2),
             width=1, outline='black', fill="green"
         )
-
 
 class Road():
     def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, speed_limit, is_2way=False,
@@ -217,7 +218,6 @@ class Road():
             width=1, outline='black', fill="red"
         )
 
-
 class Car():
     def __init__(self, classType, road_tag, lane_num, offset=0):
         global num_cars
@@ -256,18 +256,22 @@ class Car():
         - perception_time (reaction time)
         -
         '''
+        #Study on acceleration and deceleration
+        # http://www.academia.edu/7840630/Acceleration-Deceleration_Behaviour_of_Various_Vehicle_Types
+
+#all speeds and the like should be multiplied by scale
 
         # should all be random (need realistic ranges)
         self.speeding_attitude = 0
         # should be random centered around speed limit
-        self.max_speed = self.get_lane().speed_limit
+        self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,15)/10
         #speed car want to turn at
-        self.turning_speed = 1
-        self.max_acceleration = 2
-        self.breaking_capacity = 3
+        self.turning_speed = 1.5
+        self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
+        self.breaking_capacity = float(3)*random.randrange(8,15)/10 #should be relative to speed
         self.reaction_time = 2
         # how much space they're willing to have behind when changing lanes
-        self.courage = 5
+        self.courage = car_length
 
         self.draw_car()
 
@@ -341,15 +345,26 @@ class Car():
         self.draw_end_point_y = self.draw_start_point_y + (self.dirc[1] * self.car_length) + (
         self.dirc[0] * self.car_width)
 
-        self.rect = canvas.create_rectangle(
-            (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
-            width=1, outline='black', fill="blue", tags=self.road_tag)
+        if not show_car1:
+            self.rect = canvas.create_rectangle(
+                (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
+                width=1, outline='black', fill="blue", tags=self.road_tag)
+        else:
+            if self.id == 1:
+                self.rect = canvas.create_rectangle(
+                    (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
+                    width=1, outline='black', fill="purple", tags=self.road_tag)
+            else:
+                self.rect = canvas.create_rectangle(
+                    (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
+                    width=1, outline='black', fill="blue", tags=self.road_tag)
 
         if show_nose:
             self.nose = canvas.create_rectangle(
                 (self.draw_end_point_x, self.draw_end_point_y, self.draw_end_point_x + 3, self.draw_end_point_y + 3),
                 width=1, outline='black', fill="green", tags=self.road_tag)
 
+    # working, needs tuning
     def move(self):
         # move
         canvas.move(self.rect, self.speed_xy[0], self.speed_xy[1])
@@ -387,6 +402,9 @@ class Car():
                 if self.can_change_lanes(change_lane_to):
                     # change lanes
                     self.change_lanes(change_lane_to)
+                else:
+                    self.decelerate()
+
             # if critical but cant change lanes, decelerate
             else:
                 self.decelerate()
@@ -400,7 +418,6 @@ class Car():
         if self.next_speed < 0:
             self.next_speed = 0
 
-    # working, needs tuning
     def is_critical(self):
         car_infront = self.get_lane_car_infront(self.read_lane_num())
         dist_to_intersection = self.get_distance_to_next_intersection()
@@ -410,25 +427,23 @@ class Car():
             return True
         #if there is a car infront and it is close to and slower than you return true
         if car_infront != None:
-            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < car_length:
+            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (1.5*car_length):
                 return True
 
-            if car_infront.read_speed() > self.read_speed() and \
+            if car_infront.read_speed() < self.read_speed() and \
                     (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (2*car_length):
                 return True
-
         return False
 
     # working returns lane it wants to change to or False
     def tend_change_lanes(self):
         # wont change lanes close to ends of road
         # Need to make values better, currently if within 3 car lengths of intersection
-        if self.get_lane().length - self.read_distance_travelled() < car_length*3 or self.read_distance_travelled() < car_length*3:
+        if self.get_lane().length - self.read_distance_travelled() < car_length*2 or self.read_distance_travelled() < car_length*2:
             return False
 
         # should check dist to car infront in next lane, if > current lane return true
         car_infront = self.get_lane_car_infront(self.read_lane_num())
-
         # If no cars infront dont want to change
         if car_infront == None:
             return False
@@ -461,7 +476,7 @@ class Car():
         # Need to adjust courage to make more sense
         if side_car_behind is None:
             return True
-        if side_car_behind.read_distance_travelled() - self.courage > self.read_distance_travelled():
+        elif side_car_behind.read_distance_travelled() + self.courage > self.read_distance_travelled():
             return True
 
         return False
@@ -469,20 +484,60 @@ class Car():
     # working
     def change_lanes(self, lane):
         self.write_lane_num(lane)
+        self.advance_lane_num()
         # redraw car in other lane
         canvas.delete(self.rect)
         if show_nose:
             canvas.delete(self.nose)
         self.draw_car()
 
-    # working
+    # should come to full stop before touching another car
+    # implement critial distance where use full breaking
     def decelerate(self):
-        self.write_speed(self.read_speed() - self.breaking_capacity)
+
+        dist_to_intersection = self.get_distance_to_next_intersection()
+        car_infront = self.get_lane_car_infront(self.read_lane_num())
+
+        if car_infront != None:
+            dist_to_car_infront = car_infront.read_distance_travelled() - self.read_distance_travelled()
+            if dist_to_car_infront < dist_to_intersection:
+                critical_dist = dist_to_car_infront
+                # decelerates more as it gets closer
+                deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+
+                if critical_dist < (car_length*2):
+                    deceleration = self.breaking_capacity
+            else:
+                critical_dist = dist_to_intersection
+                # decelerates more as it gets closer
+                deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+
+                # dont go below turning speed
+                if self.next_speed < self.turning_speed:
+                    self.write_speed(self.turning_speed)
+        else:
+            critical_dist = dist_to_intersection
+            # decelerates more as it gets closer
+            deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+
+            # dont go below turning speed
+            if self.next_speed < self.turning_speed:
+                self.write_speed(self.turning_speed)
+
+
+
+        self.write_speed(self.read_speed() - deceleration)
 
     # working, may need tuning
     def accelerate(self):
-        # warning, dist can be negative
-        self.write_speed(self.read_speed() + self.max_acceleration)
+        #accelerate faster when going faster
+        #how fast they accelerate dependant on car
+        acceleration = (self.max_acceleration/3) * self.read_speed() * self.read_speed() + 0.5
+
+        if acceleration > self.max_acceleration:
+            acceleration = self.max_acceleration
+
+        self.write_speed(self.read_speed() + acceleration)
 
     # working
     def get_distance_to_next_intersection(self):
@@ -506,11 +561,11 @@ class Car():
                 car_beside = car
         return car_beside
 
-    # working
+    # doesnt always detect car
     def get_lane_car_infront(self, lane):
         # gets car infront so its properties can be checked
         car_infront = None
-        closest_car_dist = 10000
+        closest_car_dist = 1000000
 
         for car in cars:
             # same road, not self, in right lame, ahead of you, closer than current closest
@@ -546,7 +601,6 @@ class Car():
             canvas.delete(self.nose)
         self.draw_car()
 
-
 # working, needs tuning
 def move_cars(cars_array):
     for i in cars_array:
@@ -554,38 +608,47 @@ def move_cars(cars_array):
         # need function that gives the right adjusted distance based on prev and next roads
         # lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
         # adjustment only works for counter clockwise
-        adjusted_dist = i.read_distance_travelled() - i.read_lane_num() * lane_width
+        adjusted_dist = i.read_distance_travelled()# - i.read_lane_num() * lane_width
 
         if adjusted_dist >= eval(i.road_tag).length:
             i.next_road()
     for i in cars_array:
         i.advance()
 
-
 cars = []
 
-# test small circuit
-'''road1 = Road(400,200,200,0,'road1',2,10, is_2way=True)
-road2 = Road(700,200,200,1,'road2',2,10, is_2way=True, prev_roads=['road1'])
-road3 = Road(700,200,200,2,'road3',2,10, is_2way=True, prev_roads=['road2'])
-road4 = Road(700,200,200,3,'road4',2,10, is_2way=True, prev_roads=['road3'])'''
+'''road1 = Road(700, 400, 600, 2, 'road1', 2, 10)
+road1.add_next_road('road1')
+road1.add_prev_road('road1')
 
-'''road1 = Road(400, 600, 200, 2, 'road1', 2, 10)
-road2 = Road(700, 200, 200, 3, 'road2', 2, 10, prev_roads=['road1'])
-road3 = Road(700, 200, 200, 0, 'road3', 2, 10, prev_roads=['road2'])
-road4 = Road(700, 200, 200, 1, 'road4', 2, 10, prev_roads=['road3'])
+cars.append(Car('private_car', 'road1', 0, offset=10))
+cars.append(Car('private_car', 'road1', 0, offset=0))'''
+
+# test small circuit
+road1 = Road(700, 700, 400, 2, 'road1', 2, 10)
+road2 = Road(700, 200, 400, 3, 'road2', 2, 10, prev_roads=['road1'])
+road3 = Road(700, 200, 400, 0, 'road3', 2, 10, prev_roads=['road2'])
+road4 = Road(700, 200, 400, 1, 'road4', 2, 10, prev_roads=['road3'])
 
 road4.add_next_road('road1')
 road1.add_prev_road('road4')
 
+cars.append(Car('private_car', 'road1', 0, offset=30))
 cars.append(Car('private_car', 'road1', 0, offset=0))
-cars.append(Car('private_car', 'road1', 1, offset=80))
+cars.append(Car('private_car', 'road1', 0, offset=50))
+cars.append(Car('private_car', 'road1', 0, offset=80))
 cars.append(Car('private_car', 'road2', 0, offset=40))
 cars.append(Car('private_car', 'road2', 0, offset=60))
+cars.append(Car('private_car', 'road2', 0, offset=0))
+cars.append(Car('private_car', 'road2', 0, offset=20))
 cars.append(Car('private_car', 'road3', 0, offset=20))
 cars.append(Car('private_car', 'road3', 0, offset=70))
-cars.append(Car('private_car', 'road4', 0, offset=10))
-cars.append(Car('private_car', 'road4', 0, offset=50))'''
+cars.append(Car('private_car', 'road3', 0, offset=0))
+cars.append(Car('private_car', 'road3', 0, offset=40))
+cars.append(Car('private_car', 'road4', 0, offset=0))
+cars.append(Car('private_car', 'road4', 0, offset=50))
+cars.append(Car('private_car', 'road4', 0, offset=80))
+cars.append(Car('private_car', 'road4', 0, offset=20))
 
 # testing road ending with 2 directions
 '''road1 = Road(500,200,300,1,'road1',2,10, is_2way=True)
@@ -601,19 +664,19 @@ cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road1',1, offset=50))'''
 
 # cycling left works
-road1 = Road(800,200,300,2,'road1',2,10, is_2way=True)
-road2 = Road(None, None, 300, 2, 'road2', 2,10, is_2way=True, prev_roads=['road1'])
-road3 = Road(None, None, 100, 1, 'road3', 2,10, is_2way=True, prev_roads=['road2'])
-road4 = Road(None, None, 100, 1, 'road4', 2,10, is_2way=True, prev_roads=['road3'])
-road5 = Road(None, None, 300, 0, 'road5', 2,10, is_2way=True, prev_roads=['road4'])
-road6 = Road(None, None, 300, 0, 'road6', 2,10, is_2way=True, prev_roads=['road5'])
-road7 = Road(None, None, 100, 3, 'road7', 2,10, is_2way=True, prev_roads=['road6'])
-road8 = Road(None, None, 100, 3, 'road8', 2,10, is_2way=True, prev_roads=['road7'])
+'''road1 = Road(800,200,300,2,'road1',2,17, is_2way=True)
+road2 = Road(None, None, 300, 2, 'road2', 2,17, is_2way=True, prev_roads=['road1'])
+road3 = Road(None, None, 100, 1, 'road3', 2,11, is_2way=True, prev_roads=['road2'])
+road4 = Road(None, None, 100, 1, 'road4', 2,11, is_2way=True, prev_roads=['road3'])
+road5 = Road(None, None, 300, 0, 'road5', 2,17, is_2way=True, prev_roads=['road4'])
+road6 = Road(None, None, 300, 0, 'road6', 2,17, is_2way=True, prev_roads=['road5'])
+road7 = Road(None, None, 100, 3, 'road7', 2,11, is_2way=True, prev_roads=['road6'])
+road8 = Road(None, None, 100, 3, 'road8', 2,11, is_2way=True, prev_roads=['road7'])
 road8.add_next_road('road1')
 road1.add_prev_road('road8')
 
 cars.append(Car('private_car','road1',0, offset=80))
-cars.append(Car('private_car','road2',1, offset=80))
+cars.append(Car('private_car','road2',1, offset=80))'''
 
 # offsets not working for road cycling right
 '''road1 = Road(200,200,300,0,'road1',2,10, is_2way=True)
@@ -630,10 +693,13 @@ road1.add_prev_road('road8')
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
-for t in range(1000):
+for t in range(1000000):
     time.sleep(0.025)
     move_cars(cars)
     canvas.update()
-    tick = not tick
+
+    #sys.stdout.write('max deceleration : not max ratio- %.5f \r' % (ratio1/ratio2))
+    #sys.stdout.flush()
+
 
 root.mainloop()
