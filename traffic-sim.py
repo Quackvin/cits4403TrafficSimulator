@@ -167,16 +167,16 @@ class Road():
 
         # offset for length of road
         self.start_x = abs(prev_road.dirc[0]) * (
-        prev_road.start_x + (prev_road.dirc[0] * (prev_road.length + abs(self_road_offset))))
+            prev_road.start_x + (prev_road.dirc[0] * (prev_road.length + abs(self_road_offset))))
         self.start_y = abs(prev_road.dirc[1]) * (
-        prev_road.start_y + (prev_road.dirc[1] * (prev_road.length + abs(self_road_offset))))
+            prev_road.start_y + (prev_road.dirc[1] * (prev_road.length + abs(self_road_offset))))
 
         # offset for width of road
         if self.direction == (prev_road_direction - 1) % 4 or self.direction == (prev_road_direction + 1) % 4:
             self.start_x = (abs(prev_road.dirc[0]) * self.start_x) + abs(prev_road.dirc[1]) * (
-            prev_road.start_x - (self.dirc[0] * prev_road_offset))
+                prev_road.start_x - (self.dirc[0] * prev_road_offset))
             self.start_y = (abs(prev_road.dirc[1]) * self.start_y) + abs(prev_road.dirc[0]) * (
-            prev_road.start_y - (self.dirc[1] * prev_road_offset))
+                prev_road.start_y - (self.dirc[1] * prev_road_offset))
         elif self.direction == prev_road_direction:
             self.start_x = (abs(prev_road.dirc[0]) * self.start_x) + (abs(prev_road.dirc[1]) * prev_road.start_x)
             self.start_y = (abs(prev_road.dirc[1]) * self.start_y) + (abs(prev_road.dirc[0]) * prev_road.start_y)
@@ -493,6 +493,7 @@ class Car():
 
     # should come to full stop before touching another car
     # implement critial distance where use full breaking
+    # should decelerate to match speed of car infront
     def decelerate(self):
 
         dist_to_intersection = self.get_distance_to_next_intersection()
@@ -500,13 +501,17 @@ class Car():
 
         if car_infront != None:
             dist_to_car_infront = car_infront.read_distance_travelled() - self.read_distance_travelled()
+            #if car infront is closer than intersection
             if dist_to_car_infront < dist_to_intersection:
                 critical_dist = dist_to_car_infront
                 # decelerates more as it gets closer
                 deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
-                if critical_dist < (car_length*2):
+                #break hard if very close and much slower than you
+                if critical_dist < (car_length*2) \
+                        and self.read_speed() > car_infront.read_speed():
                     deceleration = self.breaking_capacity
+            # if there is a car infront, but the intersection is closer
             else:
                 critical_dist = dist_to_intersection
                 # decelerates more as it gets closer
@@ -515,6 +520,7 @@ class Car():
                 # dont go below turning speed
                 if self.next_speed < self.turning_speed:
                     self.write_speed(self.turning_speed)
+        # if there is no car infront
         else:
             critical_dist = dist_to_intersection
             # decelerates more as it gets closer
@@ -584,6 +590,10 @@ class Car():
             next_road = eval(eval(self.road_tag).prev_roads[self.next_direction])
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
+
+        print 'current road starting pos: ', self.get_lane().start_point_x, self.get_lane().start_point_y
+        print 'next road starting pos: ', next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y
+
         self.road_tag = next_road.road_tag
         self.write_distance_travelled(0)
         self.advance_distance_travelled()
@@ -608,7 +618,7 @@ def move_cars(cars_array):
         # need function that gives the right adjusted distance based on prev and next roads
         # lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
         # adjustment only works for counter clockwise
-        adjusted_dist = i.read_distance_travelled()# - i.read_lane_num() * lane_width
+        adjusted_dist = i.read_distance_travelled() + car_length
 
         if adjusted_dist >= eval(i.road_tag).length:
             i.next_road()
@@ -617,15 +627,24 @@ def move_cars(cars_array):
 
 cars = []
 
-'''road1 = Road(700, 400, 600, 2, 'road1', 2, 10)
-road1.add_next_road('road1')
-road1.add_prev_road('road1')
+road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
+road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
+road3 = Road(700, 200, 200, 0, 'road3', 2, 10, prev_roads=['road1'])
+road4 = Road(700, 200, 200, 3, 'road4', 2, 10, prev_roads=['road1'])
+
+road1.add_prev_road('road2')
+road1.add_prev_road('road3')
+road1.add_prev_road('road4')
+road2.add_next_road('road1')
+road3.add_next_road('road1')
+road4.add_next_road('road1')
 
 cars.append(Car('private_car', 'road1', 0, offset=10))
-cars.append(Car('private_car', 'road1', 0, offset=0))'''
+cars.append(Car('private_car', 'road1', 0, offset=0))
+
 
 # test small circuit
-road1 = Road(700, 700, 400, 2, 'road1', 2, 10)
+'''road1 = Road(700, 700, 400, 2, 'road1', 2, 10)
 road2 = Road(700, 200, 400, 3, 'road2', 2, 10, prev_roads=['road1'])
 road3 = Road(700, 200, 400, 0, 'road3', 2, 10, prev_roads=['road2'])
 road4 = Road(700, 200, 400, 1, 'road4', 2, 10, prev_roads=['road3'])
@@ -648,12 +667,12 @@ cars.append(Car('private_car', 'road3', 0, offset=40))
 cars.append(Car('private_car', 'road4', 0, offset=0))
 cars.append(Car('private_car', 'road4', 0, offset=50))
 cars.append(Car('private_car', 'road4', 0, offset=80))
-cars.append(Car('private_car', 'road4', 0, offset=20))
+cars.append(Car('private_car', 'road4', 0, offset=20))'''
 
 # testing road ending with 2 directions
-'''road1 = Road(500,200,300,1,'road1',2,10, is_2way=True)
-road2 = Road(None,None,300,2,'road2',2,10, is_2way=True, prev_roads=['road1'])
-road3 = Road(800,200,300,0,'road3',2,10, is_2way=True, prev_roads=['road1'])
+'''road1 = Road(500,200,300,1,'road1',4,10, is_2way=True)
+road2 = Road(None,None,300,2,'road2',4,10, is_2way=True, prev_roads=['road1'])
+road3 = Road(800,200,300,0,'road3',4,10, is_2way=True, prev_roads=['road1'])
 
 road2.add_next_road('road1')
 road3.add_next_road('road1')
