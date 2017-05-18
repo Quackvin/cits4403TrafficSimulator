@@ -593,13 +593,8 @@ class Car():
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
 
-<<<<<<< HEAD
         #print 'current road starting pos: ', self.get_lane().start_point_x, self.get_lane().start_point_y
         #print 'next road starting pos: ', next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y
-=======
->>>>>>> 9e2a1d2c9c2a45e2187e2604265b52622c74af51
-
-
 
         self.current_road_end_pos = [self.get_lane().end_point_x, self.get_lane().end_point_y]
         self.next_road_start_pos = [next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y]
@@ -629,7 +624,7 @@ class Car():
                 radius1 = self.intersection_centre_pos[0] - self.current_road_end_pos[0]
                 radius2 = self.intersection_centre_pos[1] - self.current_road_end_pos[1]
                 radius = radius1 if(radius1 != 0) else radius2
-                print 'radius of circle is： ', radius
+                print 'radius of circle is:', radius
         
         
         
