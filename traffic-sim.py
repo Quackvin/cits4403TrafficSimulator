@@ -178,8 +178,8 @@ class Road():
             self.start_y = (abs(prev_road.dirc[1]) * self.start_y) + abs(prev_road.dirc[0]) * (
                 prev_road.start_y - (self.dirc[1] * prev_road_offset))
         elif self.direction == prev_road_direction:
-            self.start_x = (abs(prev_road.dirc[0]) * self.start_x) + (abs(prev_road.dirc[1]) * prev_road.start_x)
-            self.start_y = (abs(prev_road.dirc[1]) * self.start_y) + (abs(prev_road.dirc[0]) * prev_road.start_y)
+            self.start_x = (abs(prev_road.dirc[0]) * (self.dirc[0] * self.num_lanes * lane_width + self.start_x - abs(self_road_offset))) + (abs(prev_road.dirc[1]) * prev_road.start_x)
+            self.start_y = (abs(prev_road.dirc[1]) * (self.dirc[1] * self.num_lanes * lane_width + self.start_y - abs(self_road_offset))) + (abs(prev_road.dirc[0]) * prev_road.start_y)
         else:
             raise Exception('Cant have roads pointing at eachother')
 
@@ -266,12 +266,12 @@ class Car():
         # should be random centered around speed limit
         self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,15)/10
         #speed car want to turn at
-        self.turning_speed = 1.5
+        self.turning_speed = 1.5 *random.randrange(8,15)/10
         self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
         self.breaking_capacity = float(3)*random.randrange(8,15)/10 #should be relative to speed
         self.reaction_time = 2
         # how much space they're willing to have behind when changing lanes
-        self.courage = car_length
+        self.courage = float(car_length) + float(1)*random.randrange(0,30)/10
 
         self.draw_car()
 
@@ -418,20 +418,29 @@ class Car():
         if self.next_speed < 0:
             self.next_speed = 0
 
+        if self.read_distance_travelled() + car_length > self.get_lane().length:
+            self.write_speed(self.turning_speed)
+
+        # if you're close to, but not inside the car infront, match their speed
+        if self.get_lane_car_infront(self.lane_num) != None \
+                and abs(self.read_speed() - self.get_lane_car_infront(self.lane_num).read_speed()) <= self.breaking_capacity \
+                and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() < 2 * self.courage \
+                and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() > self.courage:
+            self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())
+
     def is_critical(self):
         car_infront = self.get_lane_car_infront(self.read_lane_num())
         dist_to_intersection = self.get_distance_to_next_intersection()
 
-        #if 3 car lengths from intersection and above turning speed return true
-        if dist_to_intersection < car_length*3 and self.read_speed() > self.turning_speed:
+        # if 3 car lengths from intersection and above turning speed return true
+        if dist_to_intersection < self.courage*3 and self.read_speed() > self.turning_speed:
             return True
-        #if there is a car infront and it is close to and slower than you return true
+        # if there is a car infront and it is close to and slower than you return true
         if car_infront != None:
-            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (1.5*car_length):
+            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (self.courage):
                 return True
 
-            if car_infront.read_speed() < self.read_speed() and \
-                    (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (2*car_length):
+            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (1.2*self.courage):
                 return True
         return False
 
@@ -439,7 +448,7 @@ class Car():
     def tend_change_lanes(self):
         # wont change lanes close to ends of road
         # Need to make values better, currently if within 3 car lengths of intersection
-        if self.get_lane().length - self.read_distance_travelled() < car_length*2 or self.read_distance_travelled() < car_length*2:
+        if self.get_lane().length - self.read_distance_travelled() < self.courage*2 or self.read_distance_travelled() < self.courage*2:
             return False
 
         # should check dist to car infront in next lane, if > current lane return true
@@ -495,7 +504,6 @@ class Car():
     # implement critial distance where use full breaking
     # should decelerate to match speed of car infront
     def decelerate(self):
-
         dist_to_intersection = self.get_distance_to_next_intersection()
         car_infront = self.get_lane_car_infront(self.read_lane_num())
 
@@ -505,33 +513,24 @@ class Car():
             if dist_to_car_infront < dist_to_intersection:
                 critical_dist = dist_to_car_infront
                 # decelerates more as it gets closer
-                deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+                deceleration = ((self.courage/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
                 #break hard if very close and much slower than you
-                if critical_dist < (car_length*2) \
+                if critical_dist < (self.courage*2) \
                         and self.read_speed() > car_infront.read_speed():
                     deceleration = self.breaking_capacity
             # if there is a car infront, but the intersection is closer
-            else:
-                critical_dist = dist_to_intersection
-                # decelerates more as it gets closer
-                deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
-                # dont go below turning speed
-                if self.next_speed < self.turning_speed:
-                    self.write_speed(self.turning_speed)
-        # if there is no car infront
         else:
             critical_dist = dist_to_intersection
-            # decelerates more as it gets closer
-            deceleration = ((30/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+                # decelerates more as it gets closer
+            deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
-            # dont go below turning speed
+                # dont go below turning speed
             if self.next_speed < self.turning_speed:
                 self.write_speed(self.turning_speed)
 
-
-
+        # if there is no car infront
         self.write_speed(self.read_speed() - deceleration)
 
     # working, may need tuning
@@ -561,7 +560,7 @@ class Car():
             if car.road_tag == self.road_tag \
                     and car.id != self.id \
                     and car.read_lane_num() == lane \
-                    and car.read_distance_travelled() < self.read_distance_travelled() + car_length \
+                    and car.read_distance_travelled() < self.read_distance_travelled() + self.courage \
                     and car.read_distance_travelled() < closest_car_dist:
                 closest_car_dist = car.read_distance_travelled()
                 car_beside = car
@@ -591,8 +590,8 @@ class Car():
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
 
-        print 'current road starting pos: ', self.get_lane().start_point_x, self.get_lane().start_point_y
-        print 'next road starting pos: ', next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y
+        #print 'current road starting pos: ', self.get_lane().start_point_x, self.get_lane().start_point_y
+        #print 'next road starting pos: ', next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y
 
         self.road_tag = next_road.road_tag
         self.write_distance_travelled(0)
