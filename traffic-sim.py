@@ -1,5 +1,6 @@
 import Tkinter as tk
 import time, math, random, sys
+from sympy import *
 
 Main_Road_Width = 1000
 Main_Road_Height = 1000
@@ -626,6 +627,15 @@ class Car():
                 radius2 = self.intersection_centre_pos[1] - self.current_road_end_pos[1]
                 radius = radius1 if(radius1 != 0) else radius2
                 print 'radius of circle is： ', radius
+                theta = speed * interval / radius
+                #y_lenth = -math.tan(theta)*x + math.tan(theta)*self.intersection_centre_pos[0]+radius/math.sin(theta)+self.intersection_centre_pos[1]
+                x = Symbol('x')
+                y = Symbol('y')
+                # solve([equation_1, equation_2], [x,y]) got {x:3, y:-2}
+                equation_1 = y+x-1
+                equation_2 = 3*x+2*y-5
+                dictionary =solve([equation_1, equation_2],[x,y])
+                print 'connected point is: ', dictionary[x], dictionary[y]
         
         
         
