@@ -64,6 +64,9 @@ class Lane():
         self.draw_start_point_y = self.start_point_y - (self.dirc[0] * (lane_width / 2))
         self.draw_end_point_x = self.draw_start_point_x + (self.dirc[0] * self.length) - (self.dirc[1] * lane_width)
         self.draw_end_point_y = self.draw_start_point_y + (self.dirc[1] * self.length) + (self.dirc[0] * lane_width)
+        
+        self.end_point_x = self.draw_end_point_x + (self.dirc[1] * (lane_width / 2))
+        self.end_point_y = self.draw_end_point_y - (self.dirc[0] * (lane_width / 2))
 
         if not lane_colours:
             canvas.create_rectangle(
@@ -590,9 +593,46 @@ class Car():
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
 
+<<<<<<< HEAD
         #print 'current road starting pos: ', self.get_lane().start_point_x, self.get_lane().start_point_y
         #print 'next road starting pos: ', next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y
+=======
+>>>>>>> 9e2a1d2c9c2a45e2187e2604265b52622c74af51
 
+
+
+        self.current_road_end_pos = [self.get_lane().end_point_x, self.get_lane().end_point_y]
+        self.next_road_start_pos = [next_road.lanes[self.lane_num].start_point_x, next_road.lanes[self.lane_num].start_point_y]
+        print 'current road end pos: ', self.current_road_end_pos[0], self.current_road_end_pos[1]
+        print 'next road starting pos: ', self.next_road_start_pos[0], self.next_road_start_pos[1] 
+        intersection_distance = abs(self.next_road_start_pos[0] - self.current_road_end_pos[0])
+        
+        if (intersection_distance < self.get_road().num_lanes * lane_width):
+            #print 'now enter the intersection part!!!'
+            if(self.current_road_end_pos[0] == self.next_road_start_pos[0]):
+                print 'Go vertical line'
+                # add action
+            elif (self.current_road_end_pos[1] == self.next_road_start_pos[1]):
+                print 'Go horizontal line'
+                #add action
+            elif(self.current_road_end_pos[0] != self.next_road_start_pos[0] | self.current_road_end_pos[1]!=self.next_road_start_pos[1]):
+                #print 'intersection distance is: ', intersection_distance
+                current_dirc = self.get_lane().dirc
+                next_direction = next_road.lanes[self.read_lane_num()].direction
+                next_dirc = directions[next_direction]
+                intersect_centre_x = self.current_road_end_pos[0] * abs(current_dirc[1]) + self.next_road_start_pos[0] * abs(next_dirc[1])
+                intersect_centre_y = self.current_road_end_pos[1] * abs(current_dirc[0]) + self.next_road_start_pos[1] * abs(next_dirc[0])
+                self.intersection_centre_pos = [intersect_centre_x, intersect_centre_y]
+                print 'intersection pos is: ', self.intersection_centre_pos[0], self.intersection_centre_pos[1]
+                speed = self.turning_speed
+                interval = 0.025 # one secon
+                radius1 = self.intersection_centre_pos[0] - self.current_road_end_pos[0]
+                radius2 = self.intersection_centre_pos[1] - self.current_road_end_pos[1]
+                radius = radius1 if(radius1 != 0) else radius2
+                print 'radius of circle is： ', radius
+        
+        
+        
         self.road_tag = next_road.road_tag
         self.write_distance_travelled(0)
         self.advance_distance_travelled()
@@ -639,7 +679,7 @@ road3.add_next_road('road1')
 road4.add_next_road('road1')
 
 cars.append(Car('private_car', 'road1', 0, offset=10))
-cars.append(Car('private_car', 'road1', 0, offset=0))
+#cars.append(Car('private_car', 'road1', 0, offset=0))
 
 
 # test small circuit
