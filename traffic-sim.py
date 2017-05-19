@@ -661,7 +661,7 @@ def move_cars(cars_array):
 
 cars = []
 
-road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
+'''road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
 road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
 road3 = Road(700, 200, 200, 0, 'road3', 2, 10, prev_roads=['road1'])
 road4 = Road(700, 200, 200, 3, 'road4', 2, 10, prev_roads=['road1'])
@@ -674,11 +674,11 @@ road3.add_next_road('road1')
 road4.add_next_road('road1')
 
 cars.append(Car('private_car', 'road1', 0, offset=10))
-#cars.append(Car('private_car', 'road1', 0, offset=0))
+#cars.append(Car('private_car', 'road1', 0, offset=0))'''
 
 
 # test small circuit
-'''road1 = Road(700, 700, 400, 2, 'road1', 2, 10)
+road1 = Road(700, 700, 400, 2, 'road1', 2, 10)
 road2 = Road(700, 200, 400, 3, 'road2', 2, 10, prev_roads=['road1'])
 road3 = Road(700, 200, 400, 0, 'road3', 2, 10, prev_roads=['road2'])
 road4 = Road(700, 200, 400, 1, 'road4', 2, 10, prev_roads=['road3'])
@@ -701,7 +701,7 @@ cars.append(Car('private_car', 'road3', 0, offset=40))
 cars.append(Car('private_car', 'road4', 0, offset=0))
 cars.append(Car('private_car', 'road4', 0, offset=50))
 cars.append(Car('private_car', 'road4', 0, offset=80))
-cars.append(Car('private_car', 'road4', 0, offset=20))'''
+cars.append(Car('private_car', 'road4', 0, offset=20))
 
 # testing road ending with 2 directions
 '''road1 = Road(500,200,300,1,'road1',4,10, is_2way=True)
@@ -747,7 +747,7 @@ cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
 for t in range(1000000):
-    time.sleep(0.025)
+    time.sleep(0.00025)
     move_cars(cars)
     canvas.update()
 
