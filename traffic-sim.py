@@ -38,7 +38,7 @@ canvas = tk.Canvas(root, width=Main_Road_Width, height=Main_Road_Height, bg="#FF
 canvas.pack()
 
 class Lane():
-    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, lane_num, isOncoming, speed_limit):
+    def __init__(self, start_x, start_y, length, direction, road_tag, num_lanes, lane_num, is_oncoming, speed_limit):
         self.tags = road_tag
 
         self.start_point_x = start_x
@@ -50,7 +50,7 @@ class Lane():
         self.num_lanes = num_lanes
         self.lane_num = lane_num
         self.prev_road_offset = 0
-        self.isOncoming = isOncoming
+        self.is_oncoming = is_oncoming
 
         self.speed_limit = speed_limit
 
@@ -73,7 +73,7 @@ class Lane():
                 (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
                 width=lane_border, outline='black', fill=lane_colour, tags=self.tags)
         else:
-            if self.isOncoming:
+            if self.is_oncoming:
                 canvas.create_rectangle(
                     (self.draw_start_point_x, self.draw_start_point_y, self.draw_end_point_x, self.draw_end_point_y),
                     width=lane_border, outline='black', fill=reverse_lane_col, tags=self.tags)
@@ -84,7 +84,7 @@ class Lane():
 
     def flip_oncoming(self):
         # flips direction of road and starting point if its an oncoming lane
-        if self.isOncoming:
+        if self.is_oncoming:
             self.set_direction((self.direction + 2) % 4)
             self.start_point_x = self.start_point_x - (self.dirc[0] * self.length)
             self.start_point_y = self.start_point_y - (self.dirc[1] * self.length)
@@ -141,19 +141,19 @@ class Road():
         lane_num = 0
 
         # if 2way road then after the first half swap direction
-        isOncoming = False
+        is_oncoming = False
 
         # Offset is determined by if road has even or odd number of lanes
         offset = self.get_lane_offset(self.num_lanes)
 
         for i in xrange(0, self.num_lanes):
             if self.is_2way and i == self.num_lanes / 2:
-                isOncoming = True
+                is_oncoming = True
 
             self.lanes.append(
                 Lane(self.start_x - (self.dirc[1] * offset), self.start_y + (self.dirc[0] * offset), self.length,
                      self.direction, self.road_tag, self.num_lanes,
-                     lane_num, isOncoming, self.speed_limit))
+                     lane_num, is_oncoming, self.speed_limit))
             lane_num += 1
             offset += lane_width
 
@@ -588,7 +588,7 @@ class Car():
 
     # working, needs tuning
     def next_road(self):
-        if eval(self.road_tag).lanes[self.read_lane_num()].isOncoming:
+        if eval(self.road_tag).lanes[self.read_lane_num()].is_oncoming:
             next_road = eval(eval(self.road_tag).prev_roads[self.next_direction])
         else:
             next_road = eval(eval(self.road_tag).next_roads[self.next_direction])
