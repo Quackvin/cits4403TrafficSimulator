@@ -249,16 +249,6 @@ class Car():
         can be 0/1/2 because intersection can have max 4 roads and one is the road you're going in on'''
         self.next_direction = 0
 
-        '''things the car needs
-        - max+speed = 80 + 100 * ln((speeding_attitude * 1.7) + 1)
-            - 80 is speed limit
-            - 100 is how far over the limit the most daring are willing to go
-        - max_acceleration (engine power)
-        - max_deceleration (breaking capacity)
-        - speeding_attitude (how woll they are to speed)
-        - perception_time (reaction time)
-        -
-        '''
         #Study on acceleration and deceleration
         # http://www.academia.edu/7840630/Acceleration-Deceleration_Behaviour_of_Various_Vehicle_Types
 
