@@ -792,7 +792,7 @@ class Car():
 
         # move car to next road (right now it teleports)
 
-        canvas.delete(self.rect)
+        #canvas.delete(self.rect)
         if show_nose:
             canvas.delete(self.nose)
         self.draw_car()
