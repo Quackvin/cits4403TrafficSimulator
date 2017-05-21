@@ -509,23 +509,30 @@ class Car():
                 # decelerates more as it gets closer
                 deceleration = ((self.courage/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
-                #break hard if very close and much slower than you
+            #break hard if very close and much slower than you
                 if critical_dist < (self.courage*2) \
                         and self.read_speed() > car_infront.read_speed():
                     deceleration = self.breaking_capacity
+
+                    self.write_speed(self.read_speed() - deceleration)
+                    return True
+
+                self.write_speed(self.read_speed() - deceleration)
+                return True
+
             # if there is a car infront, but the intersection is closer
 
-        else:
-            critical_dist = dist_to_intersection
+        critical_dist = dist_to_intersection
                 # decelerates more as it gets closer
-            deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+        deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
                 # dont go below turning speed
-            if self.next_speed < self.turning_speed:
-                self.write_speed(self.turning_speed)
+        if self.next_speed < self.turning_speed:
+            self.write_speed(self.turning_speed)
 
         # if there is no car infront
         self.write_speed(self.read_speed() - deceleration)
+        return True
 
     # working, may need tuning
     def accelerate(self):
@@ -617,7 +624,7 @@ class Car():
                 radius2 = self.intersection_centre_pos[1] - self.current_road_end_pos[1]
                 self.radius = abs(radius1) if(radius1 != 0) else abs(radius2) 
                 self.radius = int(self.radius /4)
-                print 'radius of circle is： ', self.radius
+                print 'radius of circle is: ', self.radius
             
                 theta = math.pi / 8
                 i = 0
