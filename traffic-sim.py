@@ -4,7 +4,7 @@ import random, sys
 from math import pi, sin, cos, tan
 from sympy import *
 
-time_sleep = 0.03
+time_sleep = 0.04
 turn_num = 2
 
 Main_Road_Width = 1000
@@ -616,7 +616,7 @@ class Car():
             #print 'radius of circle is: ', radius
             theta = pi / (2 * turn_num)
             i = 0
-            #start = time.time() 
+            start = time.time() 
             while i < turn_num:
                  
                 #print '******theta is, slope_width is :', theta, slope_width
@@ -763,8 +763,8 @@ class Car():
                 i += 1
                 theta += pi / (2*turn_num)
                 
-        #stop = time.time()
-        #print'runing seconds: ',str(stop - start)
+        stop = time.time()
+        print'runing seconds: ',str(stop - start)
         
     # working, needs tuning
     def next_road(self):
