@@ -4,8 +4,13 @@ import random, sys
 from math import pi, sin, cos, tan
 from sympy import *
 
+<<<<<<< HEAD
 time_sleep = 0.005 # it is the time interval that canvas update items
 turn_num = 3 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
+=======
+time_sleep = 0.04
+turn_num = 3
+>>>>>>> a4c9e469cf5ca5c27e94057a945ff5fbba6de60e
 
 Main_Road_Width = 1000
 Main_Road_Height = 1000
@@ -254,6 +259,10 @@ class Car():
         '''determines which way to turn at intersection
         can be 0/1/2 because intersection can have max 4 roads and one is the road you're going in on'''
         self.next_direction = 0
+        if eval(self.road_tag).lanes[self.read_lane_num()].is_oncoming:
+            self.next_road_value = eval(eval(self.road_tag).prev_roads[self.next_direction])
+        else:
+            self.next_road_value = eval(eval(self.road_tag).next_roads[self.next_direction])
 
         #Study on acceleration and deceleration
         # http://www.academia.edu/7840630/Acceleration-Deceleration_Behaviour_of_Various_Vehicle_Types
@@ -261,14 +270,14 @@ class Car():
 #all speeds and the like should be multiplied by scale
 
         # should all be random (need realistic ranges)
-        self.speeding_attitude = 0
+        #self.speeding_attitude = 0
         # should be random centered around speed limit
         self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,15)/10
         #speed car want to turn at
         self.turning_speed = 1.5 *random.randrange(8,15)/10
         self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
         self.breaking_capacity = float(3)*random.randrange(8,15)/10 #should be relative to speed
-        self.reaction_time = 2
+        #self.reaction_time = 2
         # how much space they're willing to have behind when changing lanes
         self.courage = float(car_length) + float(1)*random.randrange(0,30)/10
 
@@ -375,27 +384,10 @@ class Car():
             self.turn_around()
             self.write_distance_travelled(self.read_distance_travelled() + turn_num)
 
-        # other things
-        '''
-        if critical:
-            if tend_change_lanes:
-                if can_change_lanes:
-                    change_lanes
-                else:
-                    if can_brake:
-                        brake()
-                    else:
-                        collision()
-            else:
-                if can_brake:
-                    brake()
-                else:
-                    collision()
-        else:
-            accelerate()
-            if speed_>_max:
-                speed = max
-        '''
+        if self.read_distance_travelled() >= self.get_lane().length:
+            self.turn_around()
+            self.write_distance_travelled(self.read_distance_travelled() + 1)
+
         # if critical
         if self.is_critical():
             change_lane_to = self.tend_change_lanes()
@@ -781,6 +773,10 @@ class Car():
 
         # need to delete current car: canvas.delete(current_car)
         canvas.delete(self.rect)
+<<<<<<< HEAD
+=======
+        
+>>>>>>> a4c9e469cf5ca5c27e94057a945ff5fbba6de60e
         self.road_tag = self.next_road_value.road_tag
         self.write_distance_travelled(0)
         self.advance_distance_travelled()  
@@ -802,13 +798,10 @@ class Car():
 def move_cars(cars_array):
     for i in cars_array:
         i.move()
-        # need function that gives the right adjusted distance based on prev and next roads
-        # lane_num*lane_width creates lets the car travel a little further so it looks like it getting to the lane it wants
-        # adjustment only works for counter clockwise
-        adjusted_dist = i.read_distance_travelled() + car_length *3 /4
 
-        if adjusted_dist >= eval(i.road_tag).length:
+        if i.read_distance_travelled() >= i.get_lane().length + turn_num:
             i.next_road()
+
     for i in cars_array:
         i.advance()
 
