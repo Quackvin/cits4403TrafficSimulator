@@ -256,14 +256,14 @@ class Car():
 #all speeds and the like should be multiplied by scale
 
         # should all be random (need realistic ranges)
-        self.speeding_attitude = 0
+        #self.speeding_attitude = 0
         # should be random centered around speed limit
         self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,15)/10
         #speed car want to turn at
         self.turning_speed = 1.5 *random.randrange(8,15)/10
         self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
         self.breaking_capacity = float(3)*random.randrange(8,15)/10 #should be relative to speed
-        self.reaction_time = 2
+        #self.reaction_time = 2
         # how much space they're willing to have behind when changing lanes
         self.courage = float(car_length) + float(1)*random.randrange(0,30)/10
 
