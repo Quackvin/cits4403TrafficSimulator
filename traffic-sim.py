@@ -1,11 +1,14 @@
 import Tkinter as tk
 import time
-import random, sys
+import random
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib import pyplot as plt
 from math import pi, sin, cos, tan
 from sympy import *
 
 time_sleep = 0.02 # it is the time interval that canvas update items
-turn_num = 4 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
+turn_num = 1 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
 
 Main_Road_Width = 1000
 Main_Road_Height = 1000
@@ -27,6 +30,7 @@ lane_colours = False
 show_lane_start = False
 show_road_start = False
 show_car1 = True
+disable_turning = True
 
 ratio1 = float(1)
 ratio2 = float(1)
@@ -370,7 +374,7 @@ class Car():
 
     # working, needs tuning
     def move(self):
-        if self.read_distance_travelled() >= self.get_lane().length:
+        if self.read_distance_travelled() >= self.get_lane().length and not disable_turning:
             self.turn_around()
             self.write_distance_travelled(self.read_distance_travelled() + 1)
         else:
@@ -562,7 +566,6 @@ class Car():
                 car_beside = car
         return car_beside
 
-    # doesnt always detect car
     def get_lane_car_infront(self, lane):
         # gets car infront so its properties can be checked
         car_infront = None
@@ -778,7 +781,6 @@ class Car():
 
         self.direction = self.next_road_value.lanes[self.read_lane_num()].direction
         self.dirc = directions[self.direction]
-        print "next road", self.dirc
 
         # car randomly chooses which road to take next out of the next roads given
         self.next_direction = random.randrange(0, len(self.get_road().next_roads))
@@ -797,19 +799,37 @@ class Car():
 
 # working, needs tuning
 def move_cars(cars_array):
+    global test_data
+    # each frame add new data point dataset
+    test_data.append(0)
+    values_added = 1
     for i in cars_array:
         i.move()
 
+        #record data into last element of list
+        if i.get_lane_car_infront(i.lane_num) != None:
+            dist_between = i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled()
+            if dist_between < i.get_lane().length/2:
+            # add up distances between cars
+                test_data[-1] += (i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                values_added += 1
+
+        #go to next road
         if i.read_distance_travelled() >= i.get_lane().length + turn_num:
             i.next_road()
 
     for i in cars_array:
         i.advance()
 
+    # find average of aggregated data
+    # data point represents average distance between cars
+    test_data[-1] = test_data[-1]/values_added
+
 cars = []
 
-'''
-road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
+test_data = []
+
+'''road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
 road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
 road3 = Road(700, 200, 200, 0, 'road3', 2, 10, prev_roads=['road1'])
 road4 = Road(700, 200, 200, 3, 'road4', 2, 10, prev_roads=['road1'])
@@ -894,7 +914,7 @@ road1.add_prev_road('road8')
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
-for t in range(1000000):
+for t in range(500):
     time.sleep(time_sleep)
     move_cars(cars)
     canvas.update_idletasks()
@@ -905,3 +925,6 @@ for t in range(1000000):
 
 
 root.mainloop()
+
+plt.plot(test_data)
+plt.show()
