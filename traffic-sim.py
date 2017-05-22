@@ -4,13 +4,8 @@ import random, sys
 from math import pi, sin, cos, tan
 from sympy import *
 
-<<<<<<< HEAD
-time_sleep = 0.005 # it is the time interval that canvas update items
-turn_num = 3 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
-=======
-time_sleep = 0.04
-turn_num = 3
->>>>>>> a4c9e469cf5ca5c27e94057a945ff5fbba6de60e
+time_sleep = 0.02 # it is the time interval that canvas update items
+turn_num = 4 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
 
 Main_Road_Width = 1000
 Main_Road_Height = 1000
@@ -255,6 +250,7 @@ class Car():
         self.speed = self.get_lane().speed_limit
         self.next_speed = None
         self.speed_xy = self.get_speed_components(self.read_speed())
+        self.theta = pi / (2 * turn_num)
 
         '''determines which way to turn at intersection
         can be 0/1/2 because intersection can have max 4 roads and one is the road you're going in on'''
@@ -374,50 +370,52 @@ class Car():
 
     # working, needs tuning
     def move(self):
-        # move
-        canvas.move(self.rect, self.speed_xy[0], self.speed_xy[1])
-        if show_nose:
-            canvas.move(self.nose, self.speed_xy[0], self.speed_xy[1])
-        self.write_distance_travelled(self.read_distance_travelled() + self.read_speed())
-
         if self.read_distance_travelled() >= self.get_lane().length:
             self.turn_around()
             self.write_distance_travelled(self.read_distance_travelled() + 1)
-
-        # if critical
-        if self.is_critical():
-            change_lane_to = self.tend_change_lanes()
-            # if wants to change lanes
-            if change_lane_to is not False:
-                # if can change lanes
-                if self.can_change_lanes(change_lane_to):
-                    # change lanes
-                    self.change_lanes(change_lane_to)
+        else:
+            # move
+            canvas.move(self.rect, self.speed_xy[0], self.speed_xy[1])
+            if show_nose:
+                canvas.move(self.nose, self.speed_xy[0], self.speed_xy[1])
+            self.write_distance_travelled(self.read_distance_travelled() + self.read_speed())
+    
+            
+    
+            # if critical
+            if self.is_critical():
+                change_lane_to = self.tend_change_lanes()
+                # if wants to change lanes
+                if change_lane_to is not False:
+                    # if can change lanes
+                    if self.can_change_lanes(change_lane_to):
+                        # change lanes
+                        self.change_lanes(change_lane_to)
+                    else:
+                        self.decelerate()
+    
+                # if critical but cant change lanes, decelerate
                 else:
                     self.decelerate()
-
-            # if critical but cant change lanes, decelerate
             else:
-                self.decelerate()
-        else:
-            # if not critical accelerate
-            self.accelerate()
-        # dont let speed go beyond max
-        if self.next_speed > self.max_speed:
-            self.write_speed(self.max_speed)
-        # dont let speed to below 0
-        if self.next_speed < 0:
-            self.next_speed = 0
-
-        if self.read_distance_travelled() + car_length > self.get_lane().length:
-            self.write_speed(self.turning_speed)
-
-        # if you're close to, but not inside the car infront, match their speed
-        if self.get_lane_car_infront(self.lane_num) != None \
-                and abs(self.read_speed() - self.get_lane_car_infront(self.lane_num).read_speed()) <= self.breaking_capacity \
-                and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() < 2 * self.courage \
-                and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() > self.courage:
-            self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())
+                # if not critical accelerate
+                self.accelerate()
+            # dont let speed go beyond max
+            if self.next_speed > self.max_speed:
+                self.write_speed(self.max_speed)
+            # dont let speed to below 0
+            if self.next_speed < 0:
+                self.next_speed = 0
+    
+            if self.read_distance_travelled() + car_length > self.get_lane().length:
+                self.write_speed(self.turning_speed)
+    
+            # if you're close to, but not inside the car infront, match their speed
+            if self.get_lane_car_infront(self.lane_num) != None \
+                    and abs(self.read_speed() - self.get_lane_car_infront(self.lane_num).read_speed()) <= self.breaking_capacity \
+                    and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() < 2 * self.courage \
+                    and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() > self.courage:
+                self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())
 
     def is_critical(self):
         car_infront = self.get_lane_car_infront(self.read_lane_num())
@@ -580,204 +578,215 @@ class Car():
                 closest_car_dist = car.read_distance_travelled()
                 car_infront = car
         return car_infront
-    
-    
+          
     def turn_around(self):
         
         current_road_end_pos = [self.get_lane().end_point_x, self.get_lane().end_point_y]
         next_road_start_pos = [self.next_road_value.lanes[self.lane_num].start_point_x, self.next_road_value.lanes[self.lane_num].start_point_y]
         #print 'current road end pos: ', current_road_end_pos[0], current_road_end_pos[1]
         #print 'next road starting pos: ', next_road_start_pos[0], next_road_start_pos[1] 
-        intersection_distance = abs(next_road_start_pos[0] - current_road_end_pos[0])
+        current_dirc = self.get_lane().dirc 
+        print 'current dirc is: ', current_dirc
+        next_direction = self.next_road_value.lanes[self.read_lane_num()].direction
+        next_dirc = directions[next_direction]
+        print'next dirc is: ',next_dirc
+        intersect_centre_x = current_road_end_pos[0] * abs(current_dirc[1]) + next_road_start_pos[0] * abs(next_dirc[1])
+        intersect_centre_y = current_road_end_pos[1] * abs(current_dirc[0]) + next_road_start_pos[1] * abs(next_dirc[0])
+        intersection_centre_pos = [intersect_centre_x, intersect_centre_y]
+        intersection_centre_pos = intersection_centre_pos
+        #print 'intersection pos is: ', intersection_centre_pos[0], intersection_centre_pos[1]
+        radius1 = intersection_centre_pos[0] - current_road_end_pos[0]
+        radius2 = intersection_centre_pos[1] - current_road_end_pos[1]
+        radius = abs(radius1) if(radius1 != 0) else abs(radius2) 
+        radius = int(radius /4)
+        #print 'radius of circle is: ', radius
+        theta = self.theta
+        #print '******theta is, slope_width is :', theta, slope_width
+        x= Symbol('x')
+        y= Symbol('y')
         
-        if (intersection_distance < self.get_road().num_lanes * lane_width):
-            #print 'now enter the intersection part!!!'
-            #print 'intersection distance is: ', intersection_distance
-            current_dirc = self.get_lane().dirc 
-            #print 'current dirc is: ', current_dirc
-            next_direction = self.next_road_value.lanes[self.read_lane_num()].direction
-            next_dirc = directions[next_direction]
-            #print'next dirc is: ',self.next_dirc
-            intersect_centre_x = current_road_end_pos[0] * abs(current_dirc[1]) + next_road_start_pos[0] * abs(next_dirc[1])
-            intersect_centre_y = current_road_end_pos[1] * abs(current_dirc[0]) + next_road_start_pos[1] * abs(next_dirc[0])
-            intersection_centre_pos = [intersect_centre_x, intersect_centre_y]
-            #print 'intersection pos is: ', intersection_centre_pos[0], intersection_centre_pos[1]
-            radius1 = intersection_centre_pos[0] - current_road_end_pos[0]
-            radius2 = intersection_centre_pos[1] - current_road_end_pos[1]
-            radius = abs(radius1) if(radius1 != 0) else abs(radius2) 
-            radius = int(radius /4)
-            #print 'radius of circle is: ', radius
-            theta = pi / (2 * turn_num)
-            i = 0
-            start = time.time() 
-            while i < turn_num:
-                 
-                #print '******theta is, slope_width is :', theta, slope_width
-                x= Symbol('x')
-                y= Symbol('y')
-                
-                #equation_up
-                # direction from [0,-1] to [1,0] 
-                if(current_dirc == [0,-1] and next_dirc == [1,0]):
-                    slope_width = tan(pi/2 + theta)
-                    slope_length = tan(theta)
-                    
-                    vector_v_up_x = intersection_centre_pos[0] - radius * cos(theta) - car_width * cos(theta) / 2
-                    vector_v_up_y = intersection_centre_pos[1] - radius * sin(theta) - car_width * sin(theta) / 2
-                    
-                    vector_v_down_x = intersection_centre_pos[0] - radius * cos(theta) + car_width * cos(theta) / 2
-                    vector_v_down_y = intersection_centre_pos[1] - radius * sin(theta) + car_width * sin(theta) / 2
-                                                                  
-                    vector_v_left_x = intersection_centre_pos[0] - radius * cos(theta) - car_length * sin(theta) /2
-                    vector_v_left_y = intersection_centre_pos[1] - radius * sin(theta) + car_length * cos(theta) /2
-                                                                  
-                    vector_v_right_x = intersection_centre_pos[0] - radius * cos(theta) + car_length * sin(theta) /2
-                    vector_v_right_y = intersection_centre_pos[1] - radius * sin(theta) - car_length * cos(theta) /2
-                                                                   
-                # direction from [1,0] to [0,1] 
-                elif(current_dirc == [1,0] and next_dirc == [0,1]):
-                    slope_width = tan(theta)
-                    slope_length = tan(pi/2 + theta)
-                    
-                    vector_v_up_x = intersection_centre_pos[0] + radius * sin(theta) + car_width * sin(theta) / 2
-                    vector_v_up_y = intersection_centre_pos[1] - radius * cos(theta) - car_width * cos(theta) / 2 
-                                                                
-                    vector_v_down_x = intersection_centre_pos[0] + radius * sin(theta) - car_width * sin(theta) / 2
-                    vector_v_down_y = intersection_centre_pos[1] - radius * cos(theta) + car_width * cos(theta) / 2
-                                                                  
-                    vector_v_left_x = intersection_centre_pos[0] + radius * sin(theta) - car_length * cos(theta) /2
-                    vector_v_left_y = intersection_centre_pos[1] - radius * cos(theta) - car_length * sin(theta) /2
-                                                                  
-                    vector_v_right_x = intersection_centre_pos[0] + radius * sin(theta) + car_length * cos(theta) /2
-                    vector_v_right_y = intersection_centre_pos[1] - radius * cos(theta) + car_length * sin(theta) /2    
-                                                                   
-                # direction from [0,1] to [-1,0] 
-                elif(current_dirc == [0,1] and next_dirc == [-1,0]):
-                    slope_width = tan(pi/2 + theta)
-                    slope_length = tan(theta)
-                    
-                    vector_v_up_x = intersection_centre_pos[0] + radius * cos(theta) + car_width * cos(theta) / 2
-                    vector_v_up_y = intersection_centre_pos[1] + radius * sin(theta) + car_width * sin(theta) / 2
-                                                                
-                    vector_v_down_x = intersection_centre_pos[0] + radius * cos(theta) - car_width * cos(theta) / 2
-                    vector_v_down_y = intersection_centre_pos[1] + radius * sin(theta) - car_width * sin(theta) / 2
-                                                                  
-                    vector_v_left_x = intersection_centre_pos[0] + radius * cos(theta) + car_length * sin(theta) /2
-                    vector_v_left_y = intersection_centre_pos[1] + radius * sin(theta) - car_length * cos(theta) /2
-                                                                  
-                    vector_v_right_x = intersection_centre_pos[0] + radius * cos(theta) - car_length * sin(theta) /2
-                    vector_v_right_y = intersection_centre_pos[1] + radius * sin(theta) + car_length * cos(theta) /2
-                                                                   
-                # direction from [-1,0] to [0,-1] 
-                elif(current_dirc == [-1,0] and next_dirc == [0,-1]):
-                    slope_width = tan(theta)
-                    slope_length = tan(pi/2 + theta)
-                    
-                    vector_v_up_x = intersection_centre_pos[0] - radius * sin(theta) - car_width * sin(theta) / 2
-                    vector_v_up_y = intersection_centre_pos[1] + radius * cos(theta) + car_width * cos(theta) / 2
-                
-                    vector_v_down_x = intersection_centre_pos[0] - radius * sin(theta) + car_width * sin(theta) / 2
-                    vector_v_down_y = intersection_centre_pos[1] + radius * cos(theta) - car_width * cos(theta) / 2
-                    
-                    vector_v_left_x = intersection_centre_pos[0] - radius * sin(theta) + car_length * cos(theta) /2
-                    vector_v_left_y = intersection_centre_pos[1] + radius * cos(theta) + car_length * sin(theta) /2
-                                                                  
-                    vector_v_right_x = intersection_centre_pos[0] - radius * sin(theta) - car_length * cos(theta) /2
-                    vector_v_right_y = intersection_centre_pos[1] + radius * cos(theta) - car_length * sin(theta) /2                                              
-                
-                                                                
-                vector_v_up = [vector_v_up_x, vector_v_up_y]
-                b_up = Symbol('b_up')
-                equation_vector_v_up = slope_width * vector_v_up[0] +b_up - vector_v_up[1]
-                intercept_width_up = solve([equation_vector_v_up], [b_up])
-                #print 'intercept for translate_width_up is :', intercept_width_up[b_up]  
-                equation_up = slope_width * x + intercept_width_up[b_up] - y
-                #print 'equation_up is: ', equation_up
-                                                                                  
-                vector_v_down = [vector_v_down_x, vector_v_down_y]
-                b_down = Symbol('b_down')
-                equation_vector_v_down = slope_width * vector_v_down[0] +b_down - vector_v_down[1]
-                intercept_width_down = solve([equation_vector_v_down], [b_down])
-                #print 'intercept for translate_width_down is :', intercept_width_down[b_down]
-                equation_down = slope_width * x + intercept_width_down[b_down] - y
-                #print 'equation_down is: ', equation_down
-              
-                vector_v_left = [vector_v_left_x, vector_v_left_y]
-                b_left = Symbol('b_left')
-                equation_vector_v_left = slope_length * vector_v_left[0] +b_left - vector_v_left[1]
-                intercept_length_left = solve([equation_vector_v_left], [b_left])
-                #print 'intercept for translate_length_left is :', intercept_length_left[b_left]
-                equation_left = slope_length * x + intercept_length_left[b_left] - y
-                #print 'equation_left is: ', equation_left
-                                         
-                vector_v_right = [vector_v_right_x, vector_v_right_y]
-                b_right = Symbol('b_right')
-                equation_vector_v_right = slope_length * vector_v_right[0] +b_right - vector_v_right[1]
-                intercept_length_right = solve([equation_vector_v_right], [b_right])
-                #print 'intercept for translate_length_right is :', intercept_length_right[b_right]
-                equation_right = slope_length * x + intercept_length_right[b_right] - y
-                #print 'equation_right is: ', equation_right
-                 
-                #poly_point_1
-                poly_1 =solve([equation_up, equation_left],[x,y])
-                poly_1_x = float(poly_1[x])
-                poly_1_y = float(poly_1[y])
-                #print 'polygon_point_1:', poly_1[x], poly_1[y]
-                
-                #poly_point_2
-                poly_2 =solve([equation_up, equation_right],[x,y])
-                poly_2_x = float(poly_2[x])
-                poly_2_y = float(poly_2[y])
-                #print 'polygon_point_2:', poly_2[x], poly_2[y]
-                
-                #poly_point_3
-                poly_3 =solve([equation_down, equation_right],[x,y])
-                poly_3_x = float(poly_3[x])
-                poly_3_y = float(poly_3[y])
-                #print 'polygon_point_3:', poly_3[x], poly_3[y]
-                
-                #poly_point_4
-                poly_4 =solve([equation_down, equation_left],[x,y])
-                poly_4_x = float(poly_4[x])
-                poly_4_y = float(poly_4[y])
-                #print 'polygon_point_4:', poly_4[x], poly_4[y]                   
-                
-                
-                if self.id == 1:
-                    poly = canvas.create_polygon(poly_1_x, poly_1_y,poly_2_x, poly_2_y,poly_3_x, poly_3_y,poly_4_x, poly_4_y,width=1, outline='black',fill='purple')
-                else:
-                    poly = canvas.create_polygon(poly_1_x, poly_1_y,poly_2_x, poly_2_y,poly_3_x, poly_3_y,poly_4_x, poly_4_y,width=1, outline='black',fill='blue')
-                
-                #canvas.move(self.poly,sin(theta),cos(theta))
-                canvas.move(poly,'1.0','1.0')
-                canvas.update_idletasks()
-                canvas.update()
-                canvas.delete(poly)
-                i += 1
-                theta += pi / (2*turn_num)
-                
+         
+        #equation_up
+        # direction from [0,-1] to [1,0] 
+        if(current_dirc == [0,-1] and next_dirc == [1,0]):
+            slope_width = tan(pi/2 + theta)
+            slope_length = tan(theta)
+            
+            vector_v_up_x = intersection_centre_pos[0] - radius * cos(theta) - car_width * cos(theta) / 2
+            vector_v_up_y = intersection_centre_pos[1] - radius * sin(theta) - car_width * sin(theta) / 2
+            
+            vector_v_down_x = intersection_centre_pos[0] - radius * cos(theta) + car_width * cos(theta) / 2
+            vector_v_down_y = intersection_centre_pos[1] - radius * sin(theta) + car_width * sin(theta) / 2
+                                                          
+            vector_v_left_x = intersection_centre_pos[0] - radius * cos(theta) - car_length * sin(theta) /2
+            vector_v_left_y = intersection_centre_pos[1] - radius * sin(theta) + car_length * cos(theta) /2
+                                                          
+            vector_v_right_x = intersection_centre_pos[0] - radius * cos(theta) + car_length * sin(theta) /2
+            vector_v_right_y = intersection_centre_pos[1] - radius * sin(theta) - car_length * cos(theta) /2
+                                                           
+        # direction from [1,0] to [0,1] 
+        elif(current_dirc == [1,0] and next_dirc == [0,1]):
+            slope_width = tan(theta)
+            slope_length = tan(pi/2 + theta)
+            
+            vector_v_up_x = intersection_centre_pos[0] + radius * sin(theta) + car_width * sin(theta) / 2
+            vector_v_up_y = intersection_centre_pos[1] - radius * cos(theta) - car_width * cos(theta) / 2 
+                                                        
+            vector_v_down_x = intersection_centre_pos[0] + radius * sin(theta) - car_width * sin(theta) / 2
+            vector_v_down_y = intersection_centre_pos[1] - radius * cos(theta) + car_width * cos(theta) / 2
+                                                          
+            vector_v_left_x = intersection_centre_pos[0] + radius * sin(theta) - car_length * cos(theta) /2
+            vector_v_left_y = intersection_centre_pos[1] - radius * cos(theta) - car_length * sin(theta) /2
+                                                          
+            vector_v_right_x = intersection_centre_pos[0] + radius * sin(theta) + car_length * cos(theta) /2
+            vector_v_right_y = intersection_centre_pos[1] - radius * cos(theta) + car_length * sin(theta) /2    
+                                                           
+        # direction from [0,1] to [-1,0] 
+        elif(current_dirc == [0,1] and next_dirc == [-1,0]):
+            slope_width = tan(pi/2 + theta)
+            slope_length = tan(theta)
+            
+            vector_v_up_x = intersection_centre_pos[0] + radius * cos(theta) + car_width * cos(theta) / 2
+            vector_v_up_y = intersection_centre_pos[1] + radius * sin(theta) + car_width * sin(theta) / 2
+                                                        
+            vector_v_down_x = intersection_centre_pos[0] + radius * cos(theta) - car_width * cos(theta) / 2
+            vector_v_down_y = intersection_centre_pos[1] + radius * sin(theta) - car_width * sin(theta) / 2
+                                                          
+            vector_v_left_x = intersection_centre_pos[0] + radius * cos(theta) + car_length * sin(theta) /2
+            vector_v_left_y = intersection_centre_pos[1] + radius * sin(theta) - car_length * cos(theta) /2
+                                                          
+            vector_v_right_x = intersection_centre_pos[0] + radius * cos(theta) - car_length * sin(theta) /2
+            vector_v_right_y = intersection_centre_pos[1] + radius * sin(theta) + car_length * cos(theta) /2
+                                                           
+        # direction from [-1,0] to [0,-1] 
+        elif(current_dirc == [-1,0] and next_dirc == [0,-1]):
+            slope_width = tan(theta)
+            slope_length = tan(pi/2 + theta)
+            
+            vector_v_up_x = intersection_centre_pos[0] - radius * sin(theta) - car_width * sin(theta) / 2
+            vector_v_up_y = intersection_centre_pos[1] + radius * cos(theta) + car_width * cos(theta) / 2
+        
+            vector_v_down_x = intersection_centre_pos[0] - radius * sin(theta) + car_width * sin(theta) / 2
+            vector_v_down_y = intersection_centre_pos[1] + radius * cos(theta) - car_width * cos(theta) / 2
+            
+            vector_v_left_x = intersection_centre_pos[0] - radius * sin(theta) + car_length * cos(theta) /2
+            vector_v_left_y = intersection_centre_pos[1] + radius * cos(theta) + car_length * sin(theta) /2
+                                                          
+            vector_v_right_x = intersection_centre_pos[0] - radius * sin(theta) - car_length * cos(theta) /2
+            vector_v_right_y = intersection_centre_pos[1] + radius * cos(theta) - car_length * sin(theta) /2                                              
+        else:
+            print 'exception'
+            theta_except = pi/4
+            slope_width = tan(theta_except)
+            slope_length = tan(pi/2 + theta_except)
+            
+            vector_v_up_x = intersection_centre_pos[0] - radius * sin(theta_except) - car_width * sin(theta_except) / 2
+            vector_v_up_y = intersection_centre_pos[1] + radius * cos(theta_except) + car_width * cos(theta_except) / 2
+        
+            vector_v_down_x = intersection_centre_pos[0] - radius * sin(theta_except) + car_width * sin(theta_except) / 2
+            vector_v_down_y = intersection_centre_pos[1] + radius * cos(theta_except) - car_width * cos(theta_except) / 2
+            
+            vector_v_left_x = intersection_centre_pos[0] - radius * sin(theta_except) + car_length * cos(theta_except) /2
+            vector_v_left_y = intersection_centre_pos[1] + radius * cos(theta_except) + car_length * sin(theta_except) /2
+                                                          
+            vector_v_right_x = intersection_centre_pos[0] - radius * sin(theta_except) - car_length * cos(theta_except) /2
+            vector_v_right_y = intersection_centre_pos[1] + radius * cos(theta_except) - car_length * sin(theta_except) /2
+            
+                                                        
+        vector_v_up = [vector_v_up_x, vector_v_up_y]
+        b_up = Symbol('b_up')
+        equation_vector_v_up = slope_width * vector_v_up[0] +b_up - vector_v_up[1]
+        intercept_width_up = solve([equation_vector_v_up], [b_up])
+        #print 'intercept for translate_width_up is :', intercept_width_up[b_up]  
+        equation_up = slope_width * x + intercept_width_up[b_up] - y
+        #print 'equation_up is: ', equation_up
+                                                                          
+        vector_v_down = [vector_v_down_x, vector_v_down_y]
+        b_down = Symbol('b_down')
+        equation_vector_v_down = slope_width * vector_v_down[0] +b_down - vector_v_down[1]
+        intercept_width_down = solve([equation_vector_v_down], [b_down])
+        #print 'intercept for translate_width_down is :', intercept_width_down[b_down]
+        equation_down = slope_width * x + intercept_width_down[b_down] - y
+        #print 'equation_down is: ', equation_down
+      
+        vector_v_left = [vector_v_left_x, vector_v_left_y]
+        b_left = Symbol('b_left')
+        equation_vector_v_left = slope_length * vector_v_left[0] +b_left - vector_v_left[1]
+        intercept_length_left = solve([equation_vector_v_left], [b_left])
+        #print 'intercept for translate_length_left is :', intercept_length_left[b_left]
+        equation_left = slope_length * x + intercept_length_left[b_left] - y
+        #print 'equation_left is: ', equation_left
+                                 
+        vector_v_right = [vector_v_right_x, vector_v_right_y]
+        b_right = Symbol('b_right')
+        equation_vector_v_right = slope_length * vector_v_right[0] +b_right - vector_v_right[1]
+        intercept_length_right = solve([equation_vector_v_right], [b_right])
+        #print 'intercept for translate_length_right is :', intercept_length_right[b_right]
+        equation_right = slope_length * x + intercept_length_right[b_right] - y
+        #print 'equation_right is: ', equation_right
+        #stop = time.time()
+        start = time.time()
+        #poly_point_1
+        poly_1 =solve([equation_up, equation_left],[x,y])
+        poly_1_x = float(poly_1[x])
+        poly_1_y = float(poly_1[y])
+        #print 'polygon_point_1:', poly_1[x], poly_1[y]
+        
+        #poly_point_2
+        poly_2 =solve([equation_up, equation_right],[x,y])
+        poly_2_x = float(poly_2[x])
+        poly_2_y = float(poly_2[y])
+        #print 'polygon_point_2:', poly_2[x], poly_2[y]
+        
+        #poly_point_3
+        poly_3 =solve([equation_down, equation_right],[x,y])
+        poly_3_x = float(poly_3[x])
+        poly_3_y = float(poly_3[y])
+        #print 'polygon_point_3:', poly_3[x], poly_3[y]
+        
+        #poly_point_4
+        poly_4 =solve([equation_down, equation_left],[x,y])
+        poly_4_x = float(poly_4[x])
+        poly_4_y = float(poly_4[y])
+        #print 'polygon_point_4:', poly_4[x], poly_4[y]                   
+        
+        canvas.delete(self.rect)
+        if self.id == 1:
+            self.rect = canvas.create_polygon(poly_1_x, poly_1_y,poly_2_x, poly_2_y,poly_3_x, poly_3_y,poly_4_x, poly_4_y,width=1, outline='black',fill='purple')
+            print'purple'
+        else:
+            self.rect = canvas.create_polygon(poly_1_x, poly_1_y,poly_2_x, poly_2_y,poly_3_x, poly_3_y,poly_4_x, poly_4_y,width=1, outline='black',fill='blue')
+            print 'blue'
+        #canvas.move(self.poly,sin(theta),cos(theta))
+        #canvas.move(poly,'1.0','1.0')
+        #canvas.update_idletasks()
+        #canvas.update()
+        
+        theta += pi / (2*turn_num)
+        self.theta = theta
         stop = time.time()
         print'runing seconds: ',str(stop - start)
         
     # working, needs tuning
     def next_road(self):
-        if eval(self.road_tag).lanes[self.read_lane_num()].is_oncoming:
-            self.next_road_value = eval(eval(self.road_tag).prev_roads[self.next_direction])
-        else:
-            self.next_road_value = eval(eval(self.road_tag).next_roads[self.next_direction])
-
         # need to delete current car: canvas.delete(current_car)
         canvas.delete(self.rect)
-        
+        self.theta = pi / (2 * turn_num)
         self.road_tag = self.next_road_value.road_tag
         self.write_distance_travelled(0)
         self.advance_distance_travelled()  
 
         self.direction = self.next_road_value.lanes[self.read_lane_num()].direction
         self.dirc = directions[self.direction]
+        print "next road", self.dirc
 
         # car randomly chooses which road to take next out of the next roads given
         self.next_direction = random.randrange(0, len(self.get_road().next_roads))
+        
+        if eval(self.road_tag).lanes[self.read_lane_num()].is_oncoming:
+            self.next_road_value = eval(eval(self.road_tag).prev_roads[self.next_direction])
+        else:
+            self.next_road_value = eval(eval(self.road_tag).next_roads[self.next_direction])
 
         # move car to next road (right now it teleports)
 
