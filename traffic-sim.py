@@ -1,13 +1,14 @@
 import Tkinter as tk
-import time
-import random
+import time, random, json
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 from math import pi, sin, cos, tan
 from sympy import *
 
-time_sleep = 0.02 # it is the time interval that canvas update items
+test_name = "noIntWithAcc1"
+
+time_sleep = 0.0002 # it is the time interval that canvas update items
 turn_num = 1 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
 
 Main_Road_Width = 1000
@@ -31,6 +32,7 @@ show_lane_start = False
 show_road_start = False
 show_car1 = True
 disable_turning = True
+slow_ints = False
 
 ratio1 = float(1)
 ratio2 = float(1)
@@ -254,6 +256,9 @@ class Car():
         self.speed = self.get_lane().speed_limit
         self.next_speed = None
         self.speed_xy = self.get_speed_components(self.read_speed())
+        self.acc = 0
+        self.next_acc = None
+
         self.theta = pi / (2 * turn_num)
 
         '''determines which way to turn at intersection
@@ -272,7 +277,7 @@ class Car():
         # should all be random (need realistic ranges)
         #self.speeding_attitude = 0
         # should be random centered around speed limit
-        self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,15)/10
+        self.max_speed = float(self.get_lane().speed_limit)*random.randrange(9,11)/10
         #speed car want to turn at
         self.turning_speed = 1.5 *random.randrange(8,15)/10
         self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
@@ -308,6 +313,19 @@ class Car():
         if self.next_lane_num != None:
             self.lane_num = self.next_lane_num
             self.next_lane_num = None
+        else:
+            self.acc = 0
+
+    def read_acc(self):
+        return self.acc
+
+    def write_acc(self, acc):
+        self.next_acc = acc
+
+    def advance_acc(self):
+        if self.next_acc != None:
+            self.acc = self.next_acc
+            self.next_acc = None
 
     def read_distance_travelled(self):
         return self.distance_travelled
@@ -324,6 +342,7 @@ class Car():
         self.advance_distance_travelled()
         self.advance_lane_num()
         self.advance_speed()
+        self.advance_acc()
 
     def get_speed_components(self, speed):
         if self.direction == 0:
@@ -410,31 +429,32 @@ class Car():
             # dont let speed to below 0
             if self.next_speed < 0:
                 self.next_speed = 0
-    
-            if self.read_distance_travelled() + car_length > self.get_lane().length:
+
+            if slow_ints and self.read_distance_travelled() + car_length > self.get_lane().length:
                 self.write_speed(self.turning_speed)
     
             # if you're close to, but not inside the car infront, match their speed
-            if self.get_lane_car_infront(self.lane_num) != None \
+            '''if self.get_lane_car_infront(self.lane_num) != None \
                     and abs(self.read_speed() - self.get_lane_car_infront(self.lane_num).read_speed()) <= self.breaking_capacity \
                     and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() < 2 * self.courage \
                     and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() > self.courage:
-                self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())
+                self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())'''
 
     def is_critical(self):
         car_infront = self.get_lane_car_infront(self.read_lane_num())
         dist_to_intersection = self.get_distance_to_next_intersection()
 
         # if 3 car lengths from intersection and above turning speed return true
-        if dist_to_intersection < self.courage*3 and self.read_speed() > self.turning_speed:
+        if slow_ints and dist_to_intersection < self.courage*3 and self.read_speed() > self.turning_speed:
             return True
-        # if there is a car infront and it is close to and slower than you return true
+        # if there is a car infront and it is close, return true
         if car_infront != None:
-            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (self.courage):
-                return True
-
-            if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (1.2*self.courage):
-                return True
+            if car_infront.road_tag != self.road_tag:
+                if (car_infront.read_distance_travelled() + self.get_distance_to_next_intersection()) < (2*self.courage):
+                    return True
+            else:
+                if (car_infront.read_distance_travelled() - self.read_distance_travelled()) < (2*self.courage):
+                    return True
         return False
 
     # working returns lane it wants to change to or False
@@ -457,7 +477,6 @@ class Car():
             # dont look at own lane or lanes going in opposite direction
             if i >= 0 and i < self.get_road().num_lanes and self.get_road().lanes[i].direction == self.direction:
                 # get closest car infront in next lane
-
                 side_car_infront = self.get_lane_car_infront(i)
                 if side_car_infront != None:
                     # if side_cat_infront is ahead of car_infront and remember that lane and compare it to previous
@@ -465,6 +484,7 @@ class Car():
                             and side_car_infront.read_distance_travelled() > to_lane_dist:
                         to_lane = i
                         to_lane_dist = side_car_infront.read_distance_travelled()
+                        return to_lane
                 # there is a car infront but not to the side
                 else:
                     return i
@@ -501,17 +521,24 @@ class Car():
         car_infront = self.get_lane_car_infront(self.read_lane_num())
 
         if car_infront != None:
-            dist_to_car_infront = car_infront.read_distance_travelled() - self.read_distance_travelled()
+            if car_infront.road_tag != self.road_tag:
+                dist_to_car_infront = car_infront.read_distance_travelled() + self.get_distance_to_next_intersection()
+            else:
+                dist_to_car_infront = car_infront.read_distance_travelled() - self.read_distance_travelled()
+
             #if car infront is closer than intersection
             if dist_to_car_infront < dist_to_intersection:
                 critical_dist = dist_to_car_infront
                 # decelerates more as it gets closer
-                deceleration = ((self.courage/self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+                deceleration = ((3*abs(car_infront.read_acc()))) / (critical_dist * critical_dist + 0.0001)
+                #deceleration = car_infront.read_acc() + 0.1
+                self.write_acc(deceleration)
 
-            #break hard if very close and much slower than you
-                if critical_dist < (self.courage*2) \
-                        and self.read_speed() > car_infront.read_speed():
+                #break hard if very close and much slower than you
+                if critical_dist < (self.courage): #\
+                        #and self.read_speed() > car_infront.read_speed():
                     deceleration = self.breaking_capacity
+                    self.write_acc(deceleration)
 
                     self.write_speed(self.read_speed() - deceleration)
                     return True
@@ -521,23 +548,25 @@ class Car():
 
             # if there is a car infront, but the intersection is closer
 
-        critical_dist = dist_to_intersection
+        if slow_ints:
+            critical_dist = dist_to_intersection
                 # decelerates more as it gets closer
-        deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
-
+            deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+            self.write_acc(deceleration)
                 # dont go below turning speed
-        if self.next_speed < self.turning_speed:
-            self.write_speed(self.turning_speed)
+            if self.next_speed < self.turning_speed:
+                self.write_speed(self.turning_speed)
 
         # if there is no car infront
-        self.write_speed(self.read_speed() - deceleration)
-        return True
+            self.write_speed(self.read_speed() - deceleration)
+            return True
 
     # working, may need tuning
     def accelerate(self):
         #accelerate faster when going faster
         #how fast they accelerate dependant on car
-        acceleration = (self.max_acceleration/3) * self.read_speed() * self.read_speed() + 0.5
+        acceleration = (self.max_acceleration/2) * self.read_speed() * self.read_speed() + 0.03
+        self.write_acc(acceleration)
 
         if acceleration > self.max_acceleration:
             acceleration = self.max_acceleration
@@ -576,10 +605,17 @@ class Car():
             if car.road_tag == self.road_tag \
                     and car.id != self.id \
                     and car.read_lane_num() == lane \
-                    and car.read_distance_travelled() > self.read_distance_travelled() \
+                    and car.read_distance_travelled() >= self.read_distance_travelled() \
                     and car.read_distance_travelled() < closest_car_dist:
                 closest_car_dist = car.read_distance_travelled()
                 car_infront = car
+            if car.road_tag == eval(self.get_road().next_roads[self.next_direction]).road_tag \
+                    and car.id != self.id \
+                    and car.read_lane_num() == lane \
+                    and car.read_distance_travelled() + self.get_distance_to_next_intersection() < closest_car_dist:
+                closest_car_dist = car.read_distance_travelled() + self.get_distance_to_next_intersection()
+                car_infront = car
+
         return car_infront
           
     def turn_around(self):
@@ -799,35 +835,42 @@ class Car():
 
 # working, needs tuning
 def move_cars(cars_array):
-    global test_data
     # each frame add new data point dataset
-    test_data.append(0)
-    values_added = 1
+    global average_distance_data, average_speed_data
+    ave_dist_data = 0
+    ave_speed_data = 0
+    ave_dist_added = 1
     for i in cars_array:
+
         i.move()
 
-        #record data into last element of list
+        #add up distances bewteen cars
         if i.get_lane_car_infront(i.lane_num) != None:
             dist_between = i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled()
             if dist_between < i.get_lane().length/2:
             # add up distances between cars
-                test_data[-1] += (i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
-                values_added += 1
+                ave_dist_data += (i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added += 1
+
+        #add up speeds
+        ave_speed_data += i.read_speed()
 
         #go to next road
         if i.read_distance_travelled() >= i.get_lane().length + turn_num:
             i.next_road()
-
+    #advance cars
     for i in cars_array:
         i.advance()
 
     # find average of aggregated data
     # data point represents average distance between cars
-    test_data[-1] = test_data[-1]/values_added
+    average_distance_data.append(ave_dist_data/ave_dist_added)
+    average_speed_data.append(ave_speed_data/num_cars)
 
 cars = []
 
-test_data = []
+average_distance_data = []
+average_speed_data = []
 
 '''road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
 road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
@@ -846,30 +889,37 @@ cars.append(Car('private_car', 'road1', 0, offset=0))'''
 
 
 # test small circuit
-road1 = Road(700, 610, 500, 2, 'road1', 2, 10)
-road2 = Road(700, 200, 500, 3, 'road2', 2, 10, prev_roads=['road1'])
-road3 = Road(700, 200, 500, 0, 'road3', 2, 10, prev_roads=['road2'])
-road4 = Road(700, 200, 500, 1, 'road4', 2, 10, prev_roads=['road3'])
+road1 = Road(700, 610, 500, 2, 'road1', 1, 10)
+road2 = Road(700, 200, 500, 3, 'road2', 1, 10, prev_roads=['road1'])
+road3 = Road(700, 200, 500, 0, 'road3', 1, 10, prev_roads=['road2'])
+road4 = Road(700, 200, 500, 1, 'road4', 1, 10, prev_roads=['road3'])
 
 road4.add_next_road('road1')
 road1.add_prev_road('road4')
 
-cars.append(Car('private_car', 'road1', 0, offset=30))
-cars.append(Car('private_car', 'road1', 0, offset=0))
-cars.append(Car('private_car', 'road1', 0, offset=50))
-cars.append(Car('private_car', 'road1', 0, offset=80))
-cars.append(Car('private_car', 'road2', 0, offset=40))
-cars.append(Car('private_car', 'road2', 0, offset=60))
-cars.append(Car('private_car', 'road2', 0, offset=0))
-cars.append(Car('private_car', 'road2', 0, offset=20))
-cars.append(Car('private_car', 'road3', 0, offset=20))
-cars.append(Car('private_car', 'road3', 0, offset=70))
-cars.append(Car('private_car', 'road3', 0, offset=0))
-cars.append(Car('private_car', 'road3', 0, offset=40))
-cars.append(Car('private_car', 'road4', 0, offset=0))
-cars.append(Car('private_car', 'road4', 0, offset=50))
-cars.append(Car('private_car', 'road4', 0, offset=80))
-cars.append(Car('private_car', 'road4', 0, offset=20))
+cars.append(Car('private_car', 'road1', 0, offset=31))
+cars.append(Car('private_car', 'road1', 0, offset=1))
+cars.append(Car('private_car', 'road1', 0, offset=51))
+cars.append(Car('private_car', 'road1', 0, offset=81))
+cars.append(Car('private_car', 'road2', 0, offset=41))
+cars.append(Car('private_car', 'road2', 0, offset=61))
+cars.append(Car('private_car', 'road2', 0, offset=1))
+cars.append(Car('private_car', 'road2', 0, offset=21))
+cars.append(Car('private_car', 'road3', 0, offset=22))
+cars.append(Car('private_car', 'road3', 0, offset=71))
+cars.append(Car('private_car', 'road3', 0, offset=1))
+cars.append(Car('private_car', 'road3', 0, offset=42))
+cars.append(Car('private_car', 'road4', 0, offset=3))
+cars.append(Car('private_car', 'road4', 0, offset=54))
+cars.append(Car('private_car', 'road4', 0, offset=85))
+cars.append(Car('private_car', 'road4', 0, offset=26))
+cars.append(Car('private_car', 'road3', 0, offset=2))
+cars.append(Car('private_car', 'road3', 0, offset=43))
+cars.append(Car('private_car', 'road4', 0, offset=4))
+cars.append(Car('private_car', 'road4', 0, offset=34))
+cars.append(Car('private_car', 'road4', 0, offset=82))
+cars.append(Car('private_car', 'road4', 0, offset=14))
+
 
 # testing road ending with 2 directions
 '''road1 = Road(500,200,300,1,'road1',4,10, is_2way=True)
@@ -914,7 +964,7 @@ road1.add_prev_road('road8')
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
-for t in range(500):
+for t in range(10000):
     time.sleep(time_sleep)
     move_cars(cars)
     canvas.update_idletasks()
@@ -924,7 +974,20 @@ for t in range(500):
     #sys.stdout.flush()
 
 
-root.mainloop()
+#root.mainloop()
 
-plt.plot(test_data)
+data = {'name': test_name ,'speed' : average_speed_data, 'distance' : average_distance_data}
+
+with open('trafficData.json', 'r+') as file:
+    filedat = file.read()
+    if filedat == '' or filedat == '\n':
+        file.write(json.dumps([data]))
+    else:
+        readData = json.loads(filedat)
+        readData.append(data)
+        j = json.dumps(readData)
+        file.seek(0)
+        file.write(j)
+
+plt.plot(average_speed_data)
 plt.show()
