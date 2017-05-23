@@ -33,6 +33,7 @@ show_road_start = False
 show_car1 = True
 disable_turning = True
 slow_ints = False
+use_acc = True
 
 ratio1 = float(1)
 ratio2 = float(1)
@@ -529,14 +530,18 @@ class Car():
             #if car infront is closer than intersection
             if dist_to_car_infront < dist_to_intersection:
                 critical_dist = dist_to_car_infront
-                # decelerates more as it gets closer
-                deceleration = ((3*abs(car_infront.read_acc()))) / (critical_dist * critical_dist + 0.0001)
-                #deceleration = car_infront.read_acc() + 0.1
+                if use_acc:
+                    # decelerates more as it gets closer
+                    deceleration = ((3*abs(car_infront.read_acc()))) / (critical_dist * critical_dist + 0.0001)
+                    #deceleration = car_infront.read_acc() + 0.1
+                else:
+                    deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (
+                        critical_dist * critical_dist)
                 self.write_acc(deceleration)
 
                 #break hard if very close and much slower than you
-                if critical_dist < (self.courage): #\
-                        #and self.read_speed() > car_infront.read_speed():
+                if critical_dist < (1.2*self.courage) \
+                        and self.read_speed() > car_infront.read_speed():
                     deceleration = self.breaking_capacity
                     self.write_acc(deceleration)
 
@@ -565,8 +570,11 @@ class Car():
     def accelerate(self):
         #accelerate faster when going faster
         #how fast they accelerate dependant on car
-        acceleration = (self.max_acceleration/2) * self.read_speed() * self.read_speed() + 0.03
-        self.write_acc(acceleration)
+        if use_acc:
+            acceleration = (self.max_acceleration/2) * self.read_speed() * self.read_speed() + 0.03
+            self.write_acc(acceleration)
+        else:
+            acceleration = (self.max_acceleration / 3) * self.read_speed() * self.read_speed() + 0.5
 
         if acceleration > self.max_acceleration:
             acceleration = self.max_acceleration
