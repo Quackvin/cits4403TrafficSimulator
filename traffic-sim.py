@@ -1,13 +1,16 @@
 import Tkinter as tk
 import time
 import random
-import matplotlib
+import matplotlib, json
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 from math import pi, sin, cos, tan
 from sympy import *
 
-time_sleep = 0.02 # it is the time interval that canvas update items
+test_name = "64cars2laneNoIntsFullDistPerRoad"
+
+
+time_sleep = 0.00002 # it is the time interval that canvas update items
 turn_num = 1 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
 
 Main_Road_Width = 1000
@@ -31,6 +34,7 @@ show_lane_start = False
 show_road_start = False
 show_car1 = True
 disable_turning = True
+slow_ints = False
 
 ratio1 = float(1)
 ratio2 = float(1)
@@ -411,22 +415,22 @@ class Car():
             if self.next_speed < 0:
                 self.next_speed = 0
     
-            if self.read_distance_travelled() + car_length > self.get_lane().length:
+            if slow_ints and self.read_distance_travelled() + car_length > self.get_lane().length:
                 self.write_speed(self.turning_speed)
     
             # if you're close to, but not inside the car infront, match their speed
-            if self.get_lane_car_infront(self.lane_num) != None \
+            '''if self.get_lane_car_infront(self.lane_num) != None \
                     and abs(self.read_speed() - self.get_lane_car_infront(self.lane_num).read_speed()) <= self.breaking_capacity \
                     and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() < 2 * self.courage \
                     and self.get_lane_car_infront(self.lane_num).read_distance_travelled() - self.read_distance_travelled() > self.courage:
-                self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())
+                self.write_speed(self.get_lane_car_infront(self.lane_num).read_speed())'''
 
     def is_critical(self):
         car_infront = self.get_lane_car_infront(self.read_lane_num())
         dist_to_intersection = self.get_distance_to_next_intersection()
 
         # if 3 car lengths from intersection and above turning speed return true
-        if dist_to_intersection < self.courage*3 and self.read_speed() > self.turning_speed:
+        if slow_ints and dist_to_intersection < self.courage*3 and self.read_speed() > self.turning_speed:
             return True
         # if there is a car infront and it is close to and slower than you return true
         if car_infront != None:
@@ -520,18 +524,18 @@ class Car():
                 return True
 
             # if there is a car infront, but the intersection is closer
-
-        critical_dist = dist_to_intersection
+        if slow_ints:
+            critical_dist = dist_to_intersection
                 # decelerates more as it gets closer
-        deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
+            deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (critical_dist * critical_dist)
 
                 # dont go below turning speed
-        if self.next_speed < self.turning_speed:
+        if slow_ints and self.next_speed < self.turning_speed:
             self.write_speed(self.turning_speed)
 
         # if there is no car infront
-        self.write_speed(self.read_speed() - deceleration)
-        return True
+            self.write_speed(self.read_speed() - deceleration)
+            return True
 
     # working, may need tuning
     def accelerate(self):
@@ -799,20 +803,51 @@ class Car():
 
 # working, needs tuning
 def move_cars(cars_array):
-    global test_data
     # each frame add new data point dataset
-    test_data.append(0)
-    values_added = 1
+    global average_distance_data, average_speed_data
+    ave_dist_data = [0,0,0,0]
+    ave_speed_data = [0,0,0,0]
+    ave_dist_added = [1,1,1,1]
+
     for i in cars_array:
         i.move()
 
         #record data into last element of list
         if i.get_lane_car_infront(i.lane_num) != None:
             dist_between = i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled()
-            if dist_between < i.get_lane().length/2:
-            # add up distances between cars
-                test_data[-1] += (i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
-                values_added += 1
+            if i.road_tag == 'road1':
+                    # add up distances between cars
+                ave_dist_data[0] += (i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added[0] += 1
+                ave_speed_data[0] += i.read_speed()
+
+            if i.road_tag == 'road2':
+                    # add up distances between cars
+                ave_dist_data[1] += (
+                i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added[1] += 1
+                ave_speed_data[1] += i.read_speed()
+
+            if i.road_tag == 'road3':
+                    # add up distances between cars
+                ave_dist_data[2] += (
+                i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added[2] += 1
+                ave_speed_data[2] += i.read_speed()
+
+            if i.road_tag == 'road4':
+                    # add up distances between cars
+                ave_dist_data[3] += (
+                i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added[3] += 1
+                ave_speed_data[3] += i.read_speed()
+
+                '''ave_dist_data += (
+                i.get_lane_car_infront(i.lane_num).read_distance_travelled() - i.read_distance_travelled())
+                ave_dist_added += 1
+
+            # add up speeds
+            ave_speed_data += i.read_speed()'''
 
         #go to next road
         if i.read_distance_travelled() >= i.get_lane().length + turn_num:
@@ -823,11 +858,26 @@ def move_cars(cars_array):
 
     # find average of aggregated data
     # data point represents average distance between cars
-    test_data[-1] = test_data[-1]/values_added
+    average_distance_data[0].append(ave_dist_data[0] / ave_dist_added[0])
+    average_speed_data[0].append(ave_speed_data[0] / num_cars)
+
+    average_distance_data[1].append(ave_dist_data[1] / ave_dist_added[1])
+    average_speed_data[1].append(ave_speed_data[1] / num_cars)
+
+    average_distance_data[2].append(ave_dist_data[2] / ave_dist_added[2])
+    average_speed_data[2].append(ave_speed_data[2] / num_cars)
+
+    average_distance_data[3].append(ave_dist_data[3] / ave_dist_added[3])
+    average_speed_data[3].append(ave_speed_data[3] / num_cars)
+    '''average_distance_data.append(ave_dist_data/ave_dist_added)
+    average_speed_data.append(ave_speed_data/num_cars)'''
+
 
 cars = []
 
-test_data = []
+average_distance_data = [[],[],[],[]]
+average_speed_data = [[],[],[],[]]
+
 
 '''road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
 road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
@@ -870,6 +920,57 @@ cars.append(Car('private_car', 'road4', 0, offset=0))
 cars.append(Car('private_car', 'road4', 0, offset=50))
 cars.append(Car('private_car', 'road4', 0, offset=80))
 cars.append(Car('private_car', 'road4', 0, offset=20))
+cars.append(Car('private_car', 'road1', 0, offset=30))
+cars.append(Car('private_car', 'road1', 0, offset=0))
+cars.append(Car('private_car', 'road1', 0, offset=50))
+cars.append(Car('private_car', 'road1', 0, offset=80))
+cars.append(Car('private_car', 'road2', 0, offset=40))
+cars.append(Car('private_car', 'road2', 0, offset=60))
+cars.append(Car('private_car', 'road2', 0, offset=0))
+cars.append(Car('private_car', 'road2', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=70))
+cars.append(Car('private_car', 'road3', 0, offset=0))
+cars.append(Car('private_car', 'road3', 0, offset=40))
+cars.append(Car('private_car', 'road4', 0, offset=0))
+cars.append(Car('private_car', 'road4', 0, offset=50))
+cars.append(Car('private_car', 'road4', 0, offset=80))
+cars.append(Car('private_car', 'road4', 0, offset=20))
+cars.append(Car('private_car', 'road1', 0, offset=30))
+cars.append(Car('private_car', 'road1', 0, offset=0))
+cars.append(Car('private_car', 'road1', 0, offset=50))
+cars.append(Car('private_car', 'road1', 0, offset=80))
+cars.append(Car('private_car', 'road2', 0, offset=40))
+cars.append(Car('private_car', 'road2', 0, offset=60))
+cars.append(Car('private_car', 'road2', 0, offset=0))
+cars.append(Car('private_car', 'road2', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=70))
+cars.append(Car('private_car', 'road3', 0, offset=0))
+cars.append(Car('private_car', 'road3', 0, offset=40))
+cars.append(Car('private_car', 'road4', 0, offset=0))
+cars.append(Car('private_car', 'road4', 0, offset=50))
+cars.append(Car('private_car', 'road4', 0, offset=80))
+cars.append(Car('private_car', 'road4', 0, offset=20))
+cars.append(Car('private_car', 'road1', 0, offset=30))
+cars.append(Car('private_car', 'road1', 0, offset=0))
+cars.append(Car('private_car', 'road1', 0, offset=50))
+cars.append(Car('private_car', 'road1', 0, offset=80))
+cars.append(Car('private_car', 'road2', 0, offset=40))
+cars.append(Car('private_car', 'road2', 0, offset=60))
+cars.append(Car('private_car', 'road2', 0, offset=0))
+cars.append(Car('private_car', 'road2', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=20))
+cars.append(Car('private_car', 'road3', 0, offset=70))
+cars.append(Car('private_car', 'road3', 0, offset=0))
+cars.append(Car('private_car', 'road3', 0, offset=40))
+cars.append(Car('private_car', 'road4', 0, offset=0))
+cars.append(Car('private_car', 'road4', 0, offset=50))
+cars.append(Car('private_car', 'road4', 0, offset=80))
+cars.append(Car('private_car', 'road4', 0, offset=20))
+
+
+
 
 # testing road ending with 2 directions
 '''road1 = Road(500,200,300,1,'road1',4,10, is_2way=True)
@@ -914,7 +1015,7 @@ road1.add_prev_road('road8')
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
-for t in range(500):
+for t in range(10000):
     time.sleep(time_sleep)
     move_cars(cars)
     canvas.update_idletasks()
@@ -924,7 +1025,15 @@ for t in range(500):
     #sys.stdout.flush()
 
 
-root.mainloop()
+data = {'name': test_name ,'speed' : average_speed_data, 'distance' : average_distance_data}
 
-plt.plot(test_data)
-plt.show()
+with open('newtrafficData.json', 'r+') as file:
+    filedat = file.read()
+    if filedat == '' or filedat == '\n':
+        file.write(json.dumps([data]))
+    else:
+        readData = json.loads(filedat)
+        readData.append(data)
+        j = json.dumps(readData)
+        file.seek(0)
+        file.write(j)
