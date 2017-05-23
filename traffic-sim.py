@@ -277,7 +277,7 @@ class Car():
         # should all be random (need realistic ranges)
         #self.speeding_attitude = 0
         # should be random centered around speed limit
-        self.max_speed = float(self.get_lane().speed_limit)*random.randrange(9,11)/10
+        self.max_speed = float(self.get_lane().speed_limit)*random.randrange(8,13)/10
         #speed car want to turn at
         self.turning_speed = 1.5 *random.randrange(8,15)/10
         self.max_acceleration = float(3)*random.randrange(8,15)/10 #m/s^2
@@ -609,12 +609,12 @@ class Car():
                     and car.read_distance_travelled() < closest_car_dist:
                 closest_car_dist = car.read_distance_travelled()
                 car_infront = car
-            if car.road_tag == eval(self.get_road().next_roads[self.next_direction]).road_tag \
+            '''if car.road_tag == eval(self.get_road().next_roads[self.next_direction]).road_tag \
                     and car.id != self.id \
                     and car.read_lane_num() == lane \
                     and car.read_distance_travelled() + self.get_distance_to_next_intersection() < closest_car_dist:
                 closest_car_dist = car.read_distance_travelled() + self.get_distance_to_next_intersection()
-                car_infront = car
+                car_infront = car'''
 
         return car_infront
           
