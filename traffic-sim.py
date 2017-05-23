@@ -541,7 +541,7 @@ class Car():
                     # deceleration = car_infront.read_acc() + 0.1
                 else:
                     deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (
-                        critical_dist * critical_dist)
+                        critical_dist * critical_dist + 0.0001)
                 self.write_acc(deceleration)
 
                 # break hard if very close and much slower than you
