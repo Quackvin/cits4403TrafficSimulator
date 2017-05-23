@@ -33,7 +33,7 @@ show_road_start = False
 show_car1 = True
 disable_turning = True
 slow_ints = False
-use_acc = True
+use_acc = False
 
 ratio1 = float(1)
 ratio2 = float(1)
@@ -536,7 +536,7 @@ class Car():
                     #deceleration = car_infront.read_acc() + 0.1
                 else:
                     deceleration = ((self.courage / self.breaking_capacity) * critical_dist) / (
-                        critical_dist * critical_dist)
+                        critical_dist * critical_dist + 0.0001)
                 self.write_acc(deceleration)
 
                 #break hard if very close and much slower than you
@@ -570,11 +570,8 @@ class Car():
     def accelerate(self):
         #accelerate faster when going faster
         #how fast they accelerate dependant on car
-        if use_acc:
-            acceleration = (self.max_acceleration/2) * self.read_speed() * self.read_speed() + 0.03
-            self.write_acc(acceleration)
-        else:
-            acceleration = (self.max_acceleration / 3) * self.read_speed() * self.read_speed() + 0.5
+        acceleration = (self.max_acceleration/2) * self.read_speed() * self.read_speed() + 0.03
+        self.write_acc(acceleration)
 
         if acceleration > self.max_acceleration:
             acceleration = self.max_acceleration
