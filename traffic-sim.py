@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from math import pi, sin, cos, tan
 from sympy import *
 
-time_sleep = 0.02 # it is the time interval that canvas update items
+time_sleep = 0.0000001 # it is the time interval that canvas update items
 turn_num = 1 # it could be 1,2,3. Decide how many steps that a car turn around in 1/4 circle
 
 Main_Road_Width = 1000
@@ -818,7 +818,33 @@ def move_cars(cars_array):
         if i.read_distance_travelled() >= i.get_lane().length + turn_num:
             i.next_road()
 
+    # number of road have been registered: num_of_road = 4, manually count
+    global data_frame, data_space
+    
     for i in cars_array:
+        road_tag = i.road_tag
+        road_num = int(road_tag[-1])
+        #print '******road_num is:', road_num
+        lane_tag = i.lane_num
+        #print 'lane_tag: ',lane_tag
+        travelled_distance = i.read_distance_travelled()
+        #print'travelled distance: ', travelled_distance
+        lane_length = i.get_lane().length
+        #print 'lane_length: ',lane_length
+        capacity_of_lane = lane_length / car_length
+        #print 'capacity_of_lane is: ',capacity_of_lane
+        capacity_of_road = capacity_of_lane * 2
+        #print 'capacity_of_road is: ',capacity_of_road
+        index =  int(travelled_distance / lane_length * capacity_of_lane)+1
+        #print 'index: ', index
+        x_location = frame_count 
+        #print 'x_location: ',x_location
+        data_frame.append(x_location)
+        
+        y_location = index + lane_tag * capacity_of_lane + (road_num - 1) * capacity_of_road 
+        #print 'y_location:', y_location
+        data_space.append(y_location)
+        
         i.advance()
 
     # find average of aggregated data
@@ -828,6 +854,9 @@ def move_cars(cars_array):
 cars = []
 
 test_data = []
+
+data_frame =[]
+data_space = []
 
 '''road1 = Road(200, 400, 300, 0, 'road1', 2, 10)
 road2 = Road(700, 200, 200, 1, 'road2', 2, 10, prev_roads=['road1'])
@@ -918,22 +947,25 @@ cars.append(Car('private_car','road2',1, offset=80))'''
 # data discussion section for density & traffic jam
 num_of_road = 4
 num_of_car = len(cars)
-print 'number of car: ', num_of_car
-data_traffic_jam = []
-test_i = 1
-while test_i <= num_of_road:
-    road_tag = 'road'+ str(test_i)
-    print 'road_tag is: ', road_tag
-    road = eval(road_tag)
-    print 'is_2way true or false: ', road.is_2way
-    #print 'car_length is: ', cars.car_length
-    if(road.is_2way == True):
-        pass
-    
-    test_i+=1
+#print 'number of car: ', num_of_car
+#data_traffic_jam = []
+#test_i = 1
+#while test_i <= num_of_road:
+#    road_tag = 'road'+ str(test_i)
+#    print 'road_tag is: ', road_tag
+#    road = eval(road_tag)
+#    print 'and num of lanes is: ', road.num_lanes
+#    road_length = road.length
+#    print 'and length of road is: ', road_length
+#    print 'car_length is: ', car_length
+#    capacity_of_lane = road_length / car_length
+#    print 'capacity of each lane is: ', capacity_of_lane
+#    
+#    test_i+=1
 
-           
+frame_count = 0           
 for t in range(500):
+    frame_count = t
     time.sleep(time_sleep)
     move_cars(cars)
     canvas.update_idletasks()
@@ -945,5 +977,12 @@ for t in range(500):
 
 root.mainloop()
 
-plt.plot(test_data)
+#plt.plot(test_data)
+#plt.show()
+
+#print 'data_frame: ', data_frame
+#print 'data_space: ', data_space
+#plt.xlim(0,5)
+#plt.ylim(0,120)
+plt.plot(data_frame,data_space,'ro')
 plt.show()
