@@ -882,7 +882,7 @@ def move_cars(cars_array):
         #print'travelled distance: ', travelled_distance
         lane_length = i.get_lane().length
         #print 'lane_length: ',lane_length
-        capacity_of_lane = lane_length / car_length
+        capacity_of_lane = lane_length / (car_length*2)
         #print 'capacity_of_lane is: ',capacity_of_lane
         capacity_of_road = capacity_of_lane * lane_num
         capacity_of_one_road = capacity_of_road
@@ -924,25 +924,31 @@ cars.append(Car('private_car', 'road1', 0, offset=10))
 cars.append(Car('private_car', 'road1', 0, offset=0))'''
 
 # test small circuit
-road1 = Road(700, 610, 500, 2, 'road1', 2, 10)
-road2 = Road(700, 200, 500, 3, 'road2', 2, 10, prev_roads=['road1'])
-road3 = Road(700, 200, 500, 0, 'road3', 2, 10, prev_roads=['road2'])
-road4 = Road(700, 200, 500, 1, 'road4', 2, 10, prev_roads=['road3'])
+road1 = Road(700, 610, 500, 2, 'road1', 1, 10)
+road2 = Road(700, 200, 500, 3, 'road2', 1, 10, prev_roads=['road1'])
+road3 = Road(700, 200, 500, 0, 'road3', 1, 10, prev_roads=['road2'])
+road4 = Road(700, 200, 500, 1, 'road4', 1, 10, prev_roads=['road3'])
 
 road4.add_next_road('road1')
 road1.add_prev_road('road4')
 
 cars.append(Car('private_car', 'road1', 0, offset=31))
 cars.append(Car('private_car', 'road1', 0, offset=1))
+cars.append(Car('private_car', 'road1', 0, offset=20))
 cars.append(Car('private_car', 'road1', 0, offset=51))
 cars.append(Car('private_car', 'road1', 0, offset=81))
 cars.append(Car('private_car', 'road2', 0, offset=41))
 cars.append(Car('private_car', 'road2', 0, offset=61))
 cars.append(Car('private_car', 'road2', 0, offset=1))
+cars.append(Car('private_car', 'road2', 0, offset=30))
 cars.append(Car('private_car', 'road2', 0, offset=21))
+cars.append(Car('private_car', 'road2', 0, offset=8))
+cars.append(Car('private_car', 'road2', 0, offset=35))
+cars.append(Car('private_car', 'road2', 0, offset=28))
 cars.append(Car('private_car', 'road3', 0, offset=22))
 cars.append(Car('private_car', 'road3', 0, offset=71))
 cars.append(Car('private_car', 'road3', 0, offset=1))
+cars.append(Car('private_car', 'road3', 0, offset=20))
 cars.append(Car('private_car', 'road3', 0, offset=42))
 cars.append(Car('private_car', 'road4', 0, offset=3))
 cars.append(Car('private_car', 'road4', 0, offset=54))
@@ -953,7 +959,10 @@ cars.append(Car('private_car', 'road3', 0, offset=43))
 cars.append(Car('private_car', 'road4', 0, offset=4))
 cars.append(Car('private_car', 'road4', 0, offset=34))
 cars.append(Car('private_car', 'road4', 0, offset=82))
-cars.append(Car('private_car', 'road4', 0, offset=14))
+cars.append(Car('private_car', 'road4', 0, offset=54))
+cars.append(Car('private_car', 'road4', 0, offset=62))
+
+
 
 # testing road ending with 2 directions
 '''road1 = Road(500,200,300,1,'road1',4,10, is_2way=True)
@@ -999,7 +1008,7 @@ cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
 frame_count = 0           
-for t in range(200):
+for t in range(600):
     frame_count = t
     time.sleep(time_sleep)
     move_cars(cars)
@@ -1027,4 +1036,3 @@ plt.plot(data_frame,data_space,'r.')
 plt.show()
 
 #root.mainloop()
-
