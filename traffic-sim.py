@@ -914,6 +914,25 @@ road1.add_prev_road('road8')
 cars.append(Car('private_car','road1',0, offset=80))
 cars.append(Car('private_car','road2',1, offset=80))'''
 
+           
+# data discussion section for density & traffic jam
+num_of_road = 4
+num_of_car = len(cars)
+print 'number of car: ', num_of_car
+data_traffic_jam = []
+test_i = 1
+while test_i <= num_of_road:
+    road_tag = 'road'+ str(test_i)
+    print 'road_tag is: ', road_tag
+    road = eval(road_tag)
+    print 'is_2way true or false: ', road.is_2way
+    #print 'car_length is: ', cars.car_length
+    if(road.is_2way == True):
+        pass
+    
+    test_i+=1
+
+           
 for t in range(500):
     time.sleep(time_sleep)
     move_cars(cars)
